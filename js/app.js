@@ -920,6 +920,15 @@
           : `<p class="hint" style="margin:0">尚未创建密码本，进入「密码本」页面设置。</p>`}
       </section>
       <section class="card">
+        <div class="card-head"><h3>图标库</h3><span class="hint">${(() => {
+          const n = native();
+          if (!n) return 'App 内可用';
+          try { return `第 ${n.getIconIndex()}/${n.getIconCount()} 款`; } catch (e) { return 'App 内可用'; }
+        })()}</span></div>
+        <p class="hint block-hint">16 款图标随时切换。点选后桌面图标会更新；个别桌面可能需等几秒或重启桌面才显示。</p>
+        <button class="btn-ghost block-btn" id="openIconGallery">选择图标</button>
+      </section>
+      <section class="card">
         <div class="card-head"><h3>权限管理</h3></div>
         <div class="perm-list">
           <div class="perm-row">
@@ -1017,6 +1026,9 @@
       e.target.value = '';
     });
 
+    /* ---- 图标库 ---- */
+    const galleryBtn = $('#openIconGallery');
+    if (galleryBtn) galleryBtn.addEventListener('click', openIconGallery);
     /* ---- 权限管理 ---- */
     initPermissionPanel();
     /* ---- 应用更新 ---- */
@@ -1024,7 +1036,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '3.2';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '4.0';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1126,6 +1138,51 @@
   window.__onNotificationPermission = function (granted) {
     toast(granted ? '通知权限已开启' : '通知权限被拒绝');
     if (typeof window.__refreshPerm === 'function') window.__refreshPerm();
+  };
+
+  /* ---------- 图标库 ---------- */
+  function openIconGallery() {
+    const n = native();
+    if (!n || typeof n.getIconCount !== 'function') {
+      return uiAlert('图标库需要在 App 内使用');
+    }
+    let cur = 1, count = 16;
+    try { cur = n.getIconIndex(); count = n.getIconCount(); } catch (e) { }
+
+    let thumbs = [];
+    try {
+      thumbs = Array.from({ length: count }, (_, i) => `./icons/gallery/icon${String(i + 1).padStart(2, '0')}.jpg`);
+    } catch (e) { }
+
+    openModal('选择图标', `
+      <p class="hint block-hint">当前第 ${cur} 款。点选即切换，桌面图标随后刷新。</p>
+      <div class="icon-grid">
+        ${Array.from({ length: count }, (_, i) => {
+          const idx = i + 1;
+          return `<button class="icon-cell ${idx === cur ? 'on' : ''}" data-icon="${idx}">
+            <img src="${thumbs[i] || ''}" alt="图标 ${idx}" loading="lazy">
+            <span>${idx}</span>
+          </button>`;
+        }).join('')}
+      </div>`);
+
+    $$('[data-icon]').forEach(b => b.addEventListener('click', async () => {
+      const idx = Number(b.dataset.icon);
+      if (idx === cur) { toast('已经是当前图标'); return; }
+      try {
+        const r = n.switchIcon(idx);
+        if (String(r).startsWith('error')) return toast('切换失败');
+        $$('[data-icon]').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        cur = idx;
+        toast('已切换，桌面图标稍后刷新');
+      } catch (e) { toast('切换失败'); }
+    }));
+  }
+
+  // 原生切换完成回调（可选）
+  window.__onIconSwitched = function (idx) {
+    toast(`图标已切换到第 ${idx} 款`);
   };
 
   function initUpdatePanel() {
