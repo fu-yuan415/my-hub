@@ -1,7 +1,7 @@
 {
-  "versionCode": 12,
-  "versionName": "4.1",
+  "versionCode": 13,
+  "versionName": "4.2",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "版本更新流程测试版，验证更新后数据保留",
+  "changelog": "修复检查更新后版本显示与更新按钮不出现的问题",
   "publishedAt": "2026-11-18"
 }

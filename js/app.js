@@ -61,6 +61,15 @@
   let ledgerMonth = monthKey(new Date());
   let ledgerDay = '';          // '' = 全月
 
+  // 更新检查状态（全局持久，避免异步期间 DOM 被重绘导致状态丢失）
+  const UpdateState = {
+    checking: false,
+    latestText: '',
+    hasUpdate: false,
+    changelog: '',
+    remoteInfo: null
+  };
+
   /* ---------- 工具 ---------- */
   function esc(s) {
     return String(s).replace(/[&<>"']/g, c =>
@@ -957,12 +966,12 @@
         </div>
         <div class="ver-row">
           <span>最新版本</span>
-          <strong id="latestVer">未检查</strong>
+          <strong id="latestVer">${UpdateState.latestText || '未检查'}</strong>
         </div>
-        <div id="updateChangelog" class="update-note hidden"></div>
+        ${UpdateState.hasUpdate ? `<div class="update-note">${esc(UpdateState.changelog || '有新版本可用')}</div>` : ''}
         <div class="btn-row">
-          <button class="btn-ghost" id="checkUpdateBtn">检查更新</button>
-          <button class="btn-primary hidden" id="doUpdateBtn">立即更新</button>
+          <button class="btn-ghost" id="checkUpdateBtn">${UpdateState.checking ? '检查中…' : '检查更新'}</button>
+          ${UpdateState.hasUpdate ? `<button class="btn-primary" id="doUpdateBtn">立即更新</button>` : ''}
         </div>
         <button class="btn-ghost block-btn" id="forceRefresh">强制刷新界面</button>
         <p class="hint block-hint">更新为覆盖安装，不会清除你的数据。界面样式异常时点「强制刷新」。</p>
@@ -1036,7 +1045,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '4.1';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '4.2';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1187,11 +1196,7 @@
 
   function initUpdatePanel() {
     const cur = $('#curVer');
-    const latest = $('#latestVer');
-    const checkBtn = $('#checkUpdateBtn');
-    const doBtn = $('#doUpdateBtn');
     const footer = $('#verFooter');
-    const logBox = $('#updateChangelog');
 
     const v = getCurrentVersion();
     if (cur) {
@@ -1205,43 +1210,35 @@
         : `我的工作台 · 网页版 ${v.web}`;
     }
 
-    let remoteInfo = null;
-
     async function checkUpdate(silent) {
-      if (checkBtn) { checkBtn.disabled = true; checkBtn.textContent = '检查中…'; }
+      UpdateState.checking = true;
+      if (!silent) render();   // 立刻把按钮变成"检查中…"
       try {
-        // 本地版从固定网址检查；网页版从同目录检查
         const url = location.protocol === 'file:'
           ? 'https://fu-yuan415.github.io/my-hub/version.json?t=' + Date.now()
           : './version.json?t=' + Date.now();
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        remoteInfo = await res.json();
-        if (latest) latest.textContent = `${remoteInfo.versionName}（${remoteInfo.versionCode}）`;
-
-        const hasUpdate = Number(remoteInfo.versionCode) > v.code;
-        if (hasUpdate) {
-          if (logBox) {
-            logBox.textContent = remoteInfo.changelog || '有新版本可用';
-            logBox.classList.remove('hidden');
-          }
-          if (doBtn) doBtn.classList.remove('hidden');
-          if (!silent) toast('发现新版本，可立即更新');
-        } else {
-          if (logBox) logBox.classList.add('hidden');
-          if (doBtn) doBtn.classList.add('hidden');
-          if (!silent) toast('已是最新版本');
-        }
-        return hasUpdate;
+        const info = await res.json();
+        UpdateState.remoteInfo = info;
+        UpdateState.latestText = `${info.versionName}（${info.versionCode}）`;
+        UpdateState.hasUpdate = Number(info.versionCode) > v.code;
+        UpdateState.changelog = info.changelog || '有新版本可用';
+        UpdateState.checking = false;
+        render();               // 关键：检测完重新渲染，让最新版本和按钮出现在页面上
+        if (!silent) toast(UpdateState.hasUpdate ? '发现新版本，可立即更新' : '已是最新版本');
+        return UpdateState.hasUpdate;
       } catch (e) {
-        if (latest) latest.textContent = '检查失败';
+        UpdateState.checking = false;
+        UpdateState.latestText = '检查失败';
+        UpdateState.hasUpdate = false;
+        render();
         if (!silent) toast('检查更新失败，请检查网络');
         return false;
-      } finally {
-        if (checkBtn) { checkBtn.disabled = false; checkBtn.textContent = '检查更新'; }
       }
     }
 
+    const checkBtn = $('#checkUpdateBtn');
     if (checkBtn) checkBtn.addEventListener('click', () => checkUpdate(false));
 
     const refreshBtn = $('#forceRefresh');
@@ -1262,17 +1259,18 @@
       location.replace(location.pathname + '?r=' + Date.now());
     });
 
+    const doBtn = $('#doUpdateBtn');
     if (doBtn) doBtn.addEventListener('click', async () => {
-      if (!remoteInfo) return toast('请先检查更新');
+      const info = UpdateState.remoteInfo;
+      if (!info) return toast('请先检查更新');
       const n = native();
       if (n && typeof n.installUpdate === 'function') {
-        const r = n.installUpdate(remoteInfo.apkUrl, remoteInfo.versionName,
-          Number(remoteInfo.versionCode));
+        const r = n.installUpdate(info.apkUrl, info.versionName,
+          Number(info.versionCode));
         if (String(r).startsWith('error')) toast('启动更新失败');
         else toast('开始下载，请在提示中点击「安装」');
       } else {
-        // 浏览器环境：直接打开下载链接
-        window.open(remoteInfo.apkUrl, '_blank');
+        window.open(info.apkUrl, '_blank');
         toast('已在新页面打开下载');
       }
     });
