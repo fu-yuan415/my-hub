@@ -1,7 +1,7 @@
 {
-  "versionCode": 14,
-  "versionName": "4.3",
+  "versionCode": 15,
+  "versionName": "4.4",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "测试更新闭环：关于页显示网页内核版本",
+  "changelog": "修复密码本无法使用：file协议下改用原生加密引擎",
   "publishedAt": "2026-11-18"
 }
