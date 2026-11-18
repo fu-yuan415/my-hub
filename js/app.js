@@ -955,7 +955,8 @@
           <button class="btn-ghost" id="checkUpdateBtn">检查更新</button>
           <button class="btn-primary hidden" id="doUpdateBtn">立即更新</button>
         </div>
-        <p class="hint block-hint">更新为覆盖安装，不会清除你的数据。</p>
+        <button class="btn-ghost block-btn" id="forceRefresh">强制刷新界面</button>
+        <p class="hint block-hint">更新为覆盖安装，不会清除你的数据。界面样式异常时点「强制刷新」。</p>
       </section>
       <section class="card">
         <div class="card-head"><h3>关于</h3></div>
@@ -1023,8 +1024,18 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
+  const WEB_VERSION = '2.5';   // 网页代码版本，每次改网页会同步更新
+
   function native() {
-    return (typeof window !== 'undefined' && window.AndroidNative) ? window.AndroidNative : null;
+    try {
+      if (typeof window !== 'undefined' && window.AndroidNative) return window.AndroidNative;
+    } catch (e) { /* 忽略 */ }
+    return null;
+  }
+
+  /** 是否运行在 App 内（有原生桥） */
+  function inApp() {
+    return !!native();
   }
 
   function getCurrentVersion() {
@@ -1033,11 +1044,10 @@
       try {
         const raw = n.getAppVersion();       // "2.4|6"
         const [name, code] = String(raw).split('|');
-        return { name, code: Number(code) || 0 };
+        return { name, code: Number(code) || 0, web: WEB_VERSION };
       } catch (e) { /* 忽略 */ }
     }
-    // 浏览器环境下的兜底
-    return { name: '2.4(网页版)', code: 6 };
+    return { name: '—', code: 0, web: WEB_VERSION };
   }
 
   function initPermissionPanel() {
@@ -1050,12 +1060,15 @@
     const refresh = () => {
       if (!notifBtn || !installBtn) return;
       if (!n) {
-        if (notifDesc) notifDesc.textContent = '浏览器环境不支持（请在 App 内查看）';
-        notifBtn.textContent = '—'; notifBtn.disabled = true;
-        installDesc.textContent = '浏览器环境不支持（请在 App 内查看）';
-        installBtn.textContent = '—'; installBtn.disabled = true;
+        // 在浏览器里打开，没有原生能力
+        if (notifDesc) notifDesc.textContent = '当前在浏览器中打开，安装为 App 后可用';
+        notifBtn.textContent = '不可用'; notifBtn.disabled = true; notifBtn.classList.remove('on');
+        installDesc.textContent = '当前在浏览器中打开，安装为 App 后可用';
+        installBtn.textContent = '不可用'; installBtn.disabled = true; installBtn.classList.remove('on');
         return;
       }
+      notifBtn.disabled = false;
+      installBtn.disabled = false;
       // 通知
       let hasNotif = false;
       try { hasNotif = !!n.hasNotificationPermission(); } catch (e) { }
@@ -1124,8 +1137,16 @@
     const logBox = $('#updateChangelog');
 
     const v = getCurrentVersion();
-    if (cur) cur.textContent = `${v.name}（${v.code}）`;
-    if (footer) footer.textContent = `我的工作台 · ${v.name}`;
+    if (cur) {
+      cur.textContent = inApp()
+        ? `${v.name}（${v.code}）`
+        : `网页版 ${v.web}（未安装 App）`;
+    }
+    if (footer) {
+      footer.textContent = inApp()
+        ? `我的工作台 · App ${v.name} · 网页 ${v.web}`
+        : `我的工作台 · 网页版 ${v.web}`;
+    }
 
     let remoteInfo = null;
 
@@ -1162,6 +1183,24 @@
     }
 
     if (checkBtn) checkBtn.addEventListener('click', () => checkUpdate(false));
+
+    const refreshBtn = $('#forceRefresh');
+    if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+      toast('正在刷新…');
+      try {
+        // 清 Service Worker 缓存
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch (e) { /* 忽略 */ }
+      // 强制重载（带时间戳绕过缓存）
+      location.replace(location.pathname + '?r=' + Date.now());
+    });
 
     if (doBtn) doBtn.addEventListener('click', async () => {
       if (!remoteInfo) return toast('请先检查更新');

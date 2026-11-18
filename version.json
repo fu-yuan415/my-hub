@@ -1,7 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "2.4",
+  "versionCode": 7,
+  "versionName": "2.5",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "新增权限管理、检查更新、系统通知；优化设置页",
+  "changelog": "修复版本检测与权限状态显示；新增强制刷新界面；修复缓存导致界面不更新的问题",
   "publishedAt": "2026-11-18"
 }
