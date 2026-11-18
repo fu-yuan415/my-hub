@@ -979,6 +979,7 @@
       <section class="card">
         <div class="card-head"><h3>关于</h3></div>
         <p class="hint block-hint">个人本地应用 · 数据不上传服务器 · 安装后可从桌面直接打开</p>
+        <p class="hint block-hint" style="margin-top:8px">网页内核版本 ${esc(WEB_VERSION)}</p>
       </section>
       <div class="version-text" id="verFooter">我的工作台</div>`;
     main.innerHTML = html;
@@ -1045,7 +1046,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '4.2';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '4.3';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
