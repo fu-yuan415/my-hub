@@ -24,24 +24,13 @@
     <!-- 页面容器 -->
     <main id="main"></main>
 
-    <!-- 底部导航 -->
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-page="today">
-        <span class="nav-icon">⌂</span><span class="nav-label">今日</span>
-      </button>
-      <button class="nav-item" data-page="tasks">
-        <span class="nav-icon">✓</span><span class="nav-label">任务</span>
-      </button>
-      <button class="nav-item" data-page="diary">
-        <span class="nav-icon">▤</span><span class="nav-label">日记</span>
-      </button>
-      <button class="nav-item" data-page="settings">
-        <span class="nav-icon">⚙</span><span class="nav-label">设置</span>
-      </button>
-    </nav>
+    <!-- 底部导航（由 JS 渲染） -->
+    <nav class="bottom-nav"></nav>
 
     <!-- 浮动添加按钮 -->
-    <button id="fab" class="fab" aria-label="添加">+</button>
+    <button id="fab" class="fab" aria-label="添加">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
 
     <!-- 弹窗 -->
     <div id="modal" class="modal hidden">
@@ -49,7 +38,9 @@
       <div class="modal-box">
         <div class="modal-header">
           <span id="modalTitle">标题</span>
-          <button id="modalClose" class="modal-close">×</button>
+          <button id="modalClose" class="modal-close" aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
         </div>
         <div id="modalBody" class="modal-body"></div>
       </div>
