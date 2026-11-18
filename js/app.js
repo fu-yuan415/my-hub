@@ -920,10 +920,48 @@
           : `<p class="hint" style="margin:0">尚未创建密码本，进入「密码本」页面设置。</p>`}
       </section>
       <section class="card">
+        <div class="card-head"><h3>权限管理</h3></div>
+        <div class="perm-list">
+          <div class="perm-row">
+            <div class="perm-meta">
+              <strong>通知提醒</strong>
+              <span id="permNotifDesc">用于任务到点提醒</span>
+            </div>
+            <button class="perm-btn" id="permNotifBtn">检查</button>
+          </div>
+          <div class="perm-row">
+            <div class="perm-meta">
+              <strong>安装应用更新</strong>
+              <span id="permInstallDesc">允许安装新版本 APK</span>
+            </div>
+            <button class="perm-btn" id="permInstallBtn">检查</button>
+          </div>
+        </div>
+        <button class="btn-ghost block-btn" id="openSysSettings">打开系统应用设置</button>
+        <p class="hint block-hint">系统级权限由安卓管理，这里可以快速跳转查看和修改。</p>
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>应用更新</h3></div>
+        <div class="ver-row">
+          <span>当前版本</span>
+          <strong id="curVer">读取中…</strong>
+        </div>
+        <div class="ver-row">
+          <span>最新版本</span>
+          <strong id="latestVer">未检查</strong>
+        </div>
+        <div id="updateChangelog" class="update-note hidden"></div>
+        <div class="btn-row">
+          <button class="btn-ghost" id="checkUpdateBtn">检查更新</button>
+          <button class="btn-primary hidden" id="doUpdateBtn">立即更新</button>
+        </div>
+        <p class="hint block-hint">更新为覆盖安装，不会清除你的数据。</p>
+      </section>
+      <section class="card">
         <div class="card-head"><h3>关于</h3></div>
         <p class="hint block-hint">个人本地应用 · 数据不上传服务器 · 安装后可从桌面直接打开</p>
       </section>
-      <div class="version-text">我的工作台 · 2.0</div>`;
+      <div class="version-text" id="verFooter">我的工作台</div>`;
     main.innerHTML = html;
 
     $('#nicknameInput').addEventListener('change', e => {
@@ -976,6 +1014,168 @@
       };
       reader.readAsText(f);
       e.target.value = '';
+    });
+
+    /* ---- 权限管理 ---- */
+    initPermissionPanel();
+    /* ---- 应用更新 ---- */
+    initUpdatePanel();
+  }
+
+  /* ---------- 原生能力桥 ---------- */
+  function native() {
+    return (typeof window !== 'undefined' && window.AndroidNative) ? window.AndroidNative : null;
+  }
+
+  function getCurrentVersion() {
+    const n = native();
+    if (n && typeof n.getAppVersion === 'function') {
+      try {
+        const raw = n.getAppVersion();       // "2.4|6"
+        const [name, code] = String(raw).split('|');
+        return { name, code: Number(code) || 0 };
+      } catch (e) { /* 忽略 */ }
+    }
+    // 浏览器环境下的兜底
+    return { name: '2.4(网页版)', code: 6 };
+  }
+
+  function initPermissionPanel() {
+    const n = native();
+    const notifDesc = $('#permNotifDesc');
+    const notifBtn = $('#permNotifBtn');
+    const installDesc = $('#permInstallDesc');
+    const installBtn = $('#permInstallBtn');
+
+    const refresh = () => {
+      if (!notifBtn || !installBtn) return;
+      if (!n) {
+        if (notifDesc) notifDesc.textContent = '浏览器环境不支持（请在 App 内查看）';
+        notifBtn.textContent = '—'; notifBtn.disabled = true;
+        installDesc.textContent = '浏览器环境不支持（请在 App 内查看）';
+        installBtn.textContent = '—'; installBtn.disabled = true;
+        return;
+      }
+      // 通知
+      let hasNotif = false;
+      try { hasNotif = !!n.hasNotificationPermission(); } catch (e) { }
+      notifDesc.textContent = hasNotif ? '已开启，任务到点会弹出通知' : '未开启，无法弹系统通知';
+      notifBtn.textContent = hasNotif ? '已开启' : '去开启';
+      notifBtn.classList.toggle('on', hasNotif);
+      // 安装权限
+      let canInstall = false;
+      try { canInstall = !!n.canInstallPackages(); } catch (e) { }
+      installDesc.textContent = canInstall ? '已允许安装更新' : '未允许，将无法一键更新';
+      installBtn.textContent = canInstall ? '已允许' : '去设置';
+      installBtn.classList.toggle('on', canInstall);
+    };
+
+    if (notifBtn) notifBtn.addEventListener('click', async () => {
+      if (!n) return toast('请在 App 内操作');
+      try {
+        const r = n.requestNotificationPermission();
+        if (r === 'settings') setTimeout(refresh, 800);
+        else setTimeout(refresh, 1500);
+        toast('请在弹出的提示中允许通知');
+      } catch (e) { toast('操作失败'); }
+    });
+
+    if (installBtn) installBtn.addEventListener('click', async () => {
+      if (!n) return toast('请在 App 内操作');
+      try {
+        const ok = n.canInstallPackages();
+        if (ok) return toast('已允许安装更新');
+        n.requestInstallPermission();
+        toast('请在系统中允许「安装未知应用」');
+        setTimeout(refresh, 1500);
+      } catch (e) { toast('操作失败'); }
+    });
+
+    const sysBtn = $('#openSysSettings');
+    if (sysBtn) sysBtn.addEventListener('click', () => {
+      if (!n) return toast('请在 App 内操作');
+      n.openAppSettings();
+    });
+
+    // 页面回到前台时刷新状态
+    window.__refreshPerm = refresh;
+    refresh();
+  }
+
+  // App 回到前台时刷新权限状态
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && typeof window.__refreshPerm === 'function') {
+      window.__refreshPerm();
+    }
+  });
+
+  // 原生通知权限回调
+  window.__onNotificationPermission = function (granted) {
+    toast(granted ? '通知权限已开启' : '通知权限被拒绝');
+    if (typeof window.__refreshPerm === 'function') window.__refreshPerm();
+  };
+
+  function initUpdatePanel() {
+    const cur = $('#curVer');
+    const latest = $('#latestVer');
+    const checkBtn = $('#checkUpdateBtn');
+    const doBtn = $('#doUpdateBtn');
+    const footer = $('#verFooter');
+    const logBox = $('#updateChangelog');
+
+    const v = getCurrentVersion();
+    if (cur) cur.textContent = `${v.name}（${v.code}）`;
+    if (footer) footer.textContent = `我的工作台 · ${v.name}`;
+
+    let remoteInfo = null;
+
+    async function checkUpdate(silent) {
+      if (checkBtn) { checkBtn.disabled = true; checkBtn.textContent = '检查中…'; }
+      try {
+        const url = './version.json?t=' + Date.now();
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        remoteInfo = await res.json();
+        if (latest) latest.textContent = `${remoteInfo.versionName}（${remoteInfo.versionCode}）`;
+
+        const hasUpdate = Number(remoteInfo.versionCode) > v.code;
+        if (hasUpdate) {
+          if (logBox) {
+            logBox.textContent = remoteInfo.changelog || '有新版本可用';
+            logBox.classList.remove('hidden');
+          }
+          if (doBtn) doBtn.classList.remove('hidden');
+          if (!silent) toast('发现新版本，可立即更新');
+        } else {
+          if (logBox) logBox.classList.add('hidden');
+          if (doBtn) doBtn.classList.add('hidden');
+          if (!silent) toast('已是最新版本');
+        }
+        return hasUpdate;
+      } catch (e) {
+        if (latest) latest.textContent = '检查失败';
+        if (!silent) toast('检查更新失败，请检查网络');
+        return false;
+      } finally {
+        if (checkBtn) { checkBtn.disabled = false; checkBtn.textContent = '检查更新'; }
+      }
+    }
+
+    if (checkBtn) checkBtn.addEventListener('click', () => checkUpdate(false));
+
+    if (doBtn) doBtn.addEventListener('click', async () => {
+      if (!remoteInfo) return toast('请先检查更新');
+      const n = native();
+      if (n && typeof n.installUpdate === 'function') {
+        const r = n.installUpdate(remoteInfo.apkUrl, remoteInfo.versionName,
+          Number(remoteInfo.versionCode));
+        if (String(r).startsWith('error')) toast('启动更新失败');
+        else toast('开始下载，请在提示中点击「安装」');
+      } else {
+        // 浏览器环境：直接打开下载链接
+        window.open(remoteInfo.apkUrl, '_blank');
+        toast('已在新页面打开下载');
+      }
     });
   }
 
@@ -1482,22 +1682,19 @@
   /* ---------- 任务提醒 ---------- */
   function checkReminders() {
     try {
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        Store.dueReminders().forEach(t => {
-          try {
-            new Notification('任务提醒', { body: t.text, tag: t.id });
-          } catch (e) { /* 忽略 */ }
-          Store.markReminded(t.id);
-          toast(`提醒：${t.text}`);
-        });
-      } else {
-        // 没有通知权限时用页内提示
-        const due = Store.dueReminders();
-        due.forEach(t => {
-          toast(`提醒：${t.text}`);
-          Store.markReminded(t.id);
-        });
-      }
+      const due = Store.dueReminders();
+      if (!due.length) return;
+      const n = native();
+      due.forEach(t => {
+        // 优先用原生系统通知
+        if (n && typeof n.sendTestNotification === 'function') {
+          try { n.sendTestNotification('任务提醒', t.text); } catch (e) { }
+        } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try { new Notification('任务提醒', { body: t.text, tag: t.id }); } catch (e) { }
+        }
+        toast(`提醒：${t.text}`);
+        Store.markReminded(t.id);
+      });
     } catch (e) { /* 忽略 */ }
   }
   setInterval(checkReminders, 30000);

@@ -1,0 +1,7 @@
+{
+  "versionCode": 6,
+  "versionName": "2.4",
+  "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
+  "changelog": "新增权限管理、检查更新、系统通知；优化设置页",
+  "publishedAt": "2026-11-18"
+}

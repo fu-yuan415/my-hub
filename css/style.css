@@ -841,6 +841,41 @@ input:focus, textarea:focus { border-color: var(--primary); background: var(--su
 }
 .task-meta svg { width: 11px; height: 11px; }
 
+/* ==================== 权限管理 ==================== */
+.perm-list { display: flex; flex-direction: column; margin-bottom: 12px; }
+.perm-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.perm-row:last-child { border-bottom: none; }
+.perm-meta { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.perm-meta strong { font-size: 14px; font-weight: 600; }
+.perm-meta span { font-size: 11.5px; color: var(--text-3); line-height: 1.4; }
+.perm-btn {
+  padding: 7px 14px; border-radius: 18px; flex-shrink: 0;
+  background: var(--surface-2); color: var(--text-2);
+  font-size: 12.5px; font-weight: 600;
+  transition: all .16s;
+}
+.perm-btn.on { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+.perm-btn:disabled { opacity: .5; }
+.block-btn { width: 100%; margin-top: 4px; }
+
+/* ==================== 应用更新 ==================== */
+.ver-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; font-size: 13.5px;
+}
+.ver-row span { color: var(--text-2); }
+.ver-row strong { font-weight: 650; font-variant-numeric: tabular-nums; }
+.update-note {
+  background: var(--surface-2); border-radius: var(--r-sm);
+  padding: 11px 13px; font-size: 12.5px; line-height: 1.6;
+  color: var(--text-2); margin: 6px 0 12px;
+}
+.update-note.hidden { display: none; }
+.hidden { display: none !important; }
+
 /* 小屏微调 */
 @media (max-width: 360px) {
   .stat-card { padding: 12px 10px; }
