@@ -1,7 +1,7 @@
 {
-  "versionCode": 17,
-  "versionName": "4.6",
+  "versionCode": 18,
+  "versionName": "4.7",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "修复密码本输入框无法输入：改用兼容输入模式并主动弹出键盘",
+  "changelog": "密码本改用原生对话框输入密码，彻底解决键盘弹出消失问题",
   "publishedAt": "2026-11-18"
 }

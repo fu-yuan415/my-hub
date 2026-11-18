@@ -611,14 +611,29 @@ input:focus, textarea:focus { border-color: var(--primary); background: var(--su
 .topbar-btn svg { width: 17px; height: 17px; }
 .topbar-btn:active { background: var(--primary-weak); color: var(--primary); }
 
-/* 密码输入：用 text-security 显示圆点，规避 WebView 对 password 类型
-   与密码管理器自动填充冲突导致输入框点不动的问题 */
-input.pwd-mask {
-  -webkit-text-security: disc;
-  text-security: disc;
-  ime-mode: password;
-  autocomplete: off;
+/* 密码输入：点击弹原生对话框，避免 WebView 输入框焦点/键盘问题 */
+.pwd-field {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 12px 14px; border-radius: var(--r-sm);
+  background: var(--surface-2); text-align: left;
+  border: 1.5px solid transparent; transition: border-color .15s;
 }
+.pwd-field:active { border-color: var(--primary); }
+.pwd-field-label { font-size: 13px; color: var(--text-2); flex-shrink: 0; }
+.pwd-field-value {
+  font-size: 14px; color: var(--text-3); text-align: right;
+  letter-spacing: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pwd-field-value.filled { color: var(--text); letter-spacing: 3px; }
+
+.pwd-input-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; width: 100%; padding: 11px 13px;
+  background: var(--surface-2); border-radius: var(--r-sm);
+  text-align: left;
+}
+.pwd-value { flex: 1; font-size: 14px; color: var(--text-3); letter-spacing: 1px; }
+.pwd-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
 /* ==================== 密码本 ==================== */
 .vault-hero { text-align: center; padding: 30px 22px; }

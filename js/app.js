@@ -1046,7 +1046,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '4.6';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '4.7';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1299,83 +1299,96 @@
     return renderVaultList();
   }
 
-  function renderVaultSetup() {
-    main.innerHTML = `
-      <section class="card vault-hero">
-        <div class="vault-badge">${ICON.lock}</div>
-        <h3>设置密码本主密码</h3>
-        <p class="hint block-hint">密码本里的内容会用这个密码加密后保存在本机，不上传。密码只在你脑中，忘记将无法恢复内容，请牢记。</p>
-        <div class="field"><label>设置密码（至少 4 位）</label>
-          <input type="text" class="pwd-mask" id="vp1" placeholder="输入主密码"
-                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-                 style="-webkit-user-select:text;user-select:text;caret-color:var(--primary)"></div>
-        <div class="field"><label>再输一次</label>
-          <input type="text" class="pwd-mask" id="vp2" placeholder="确认主密码"
-                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-                 style="-webkit-user-select:text;user-select:text;caret-color:var(--primary)"></div>
-        <button class="btn-primary block" id="vSetup">创建密码本</button>
-      </section>`;
-    // 主动聚焦 + 点击聚焦，兼容 WebView 输入框不弹键盘的问题
-    const nb = native();
-    ['#vp1', '#vp2'].forEach(sel => {
-      const el = $(sel);
-      if (!el) return;
-      const focusIt = () => {
-        try { el.focus(); } catch (e) { }
-        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
+  /** 用原生对话框输入密码，返回 Promise<string|null> */
+  let pwdCallbackSeq = 0;
+  function nativePromptPassword(title) {
+    return new Promise(resolve => {
+      const nb = native();
+      if (!nb || typeof nb.promptPassword !== 'function') {
+        // 浏览器环境：退化成 prompt
+        resolve(window.prompt(title, ''));
+        return;
+      }
+      const cbName = '__pwdCb' + (++pwdCallbackSeq);
+      window[cbName] = val => {
+        try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+        resolve(val);
       };
-      el.addEventListener('click', focusIt);
-      el.addEventListener('touchstart', focusIt, { passive: true });
-      el.addEventListener('focus', () => {
-        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
-      });
-    });
-    $('#vSetup').addEventListener('click', async () => {
-      const p1 = $('#vp1').value, p2 = $('#vp2').value;
-      if (p1.length < 4) return toast('密码至少 4 位');
-      if (p1 !== p2) return toast('两次输入不一致');
-      try {
-        await Vault.setup(p1);
-        toast('密码本已创建');
-        render();
-      } catch (e) { toast(e.message || '创建失败'); }
+      nb.promptPassword(title, cbName);
     });
   }
 
-  function renderVaultLock() {
-    main.innerHTML = `
-      <section class="card vault-hero">
-        <div class="vault-badge">${ICON.lock}</div>
-        <h3>密码本已锁定</h3>
-        <p class="hint block-hint">输入主密码查看内容。离开页面后会自动重新锁定。</p>
-        <div class="field"><label>主密码</label>
-          <input type="text" class="pwd-mask" id="vpUnlock" placeholder="输入密码"
-                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-                 style="-webkit-user-select:text;user-select:text;caret-color:var(--primary)"></div>
-        <button class="btn-primary block" id="vUnlock">解锁</button>
-      </section>`;
-    const ue = $('#vpUnlock');
-    if (ue) {
-      const nb = native();
-      const focusIt = () => {
-        try { ue.focus(); } catch (e) { }
-        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
-      };
-      ue.addEventListener('click', focusIt);
-      ue.addEventListener('touchstart', focusIt, { passive: true });
-      ue.addEventListener('focus', () => {
-        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
+  /** 渲染一个"点击输入密码"的按钮行（显示 •●●● 掩码） */
+  function pwdField(label, value, placeholder, onClick) {
+    return `<button class="pwd-field" data-pwd="${label}">
+      <span class="pwd-field-label">${esc(label)}</span>
+      <span class="pwd-field-value ${value ? 'filled' : ''}">${value ? '••••••••' : esc(placeholder)}</span>
+    </button>`;
+  }
+
+  function renderVaultSetup() {
+    let p1 = '', p2 = '';
+    const paint = () => {
+      main.innerHTML = `
+        <section class="card vault-hero">
+          <div class="vault-badge">${ICON.lock}</div>
+          <h3>设置密码本主密码</h3>
+          <p class="hint block-hint">密码本里的内容会用这个密码加密后保存在本机，不上传。密码只在你脑中，忘记将无法恢复内容，请牢记。</p>
+          <div class="field"><label>设置密码（至少 4 位）</label>
+            ${pwdField('p1', p1, '点这里输入主密码')}</div>
+          <div class="field"><label>再输一次</label>
+            ${pwdField('p2', p2, '点这里确认主密码')}</div>
+          <button class="btn-primary block" id="vSetup">创建密码本</button>
+        </section>`;
+      $$('[data-pwd]').forEach(b => b.addEventListener('click', async () => {
+        const which = b.dataset.pwd;
+        const val = await nativePromptPassword(which === 'p1' ? '设置主密码' : '确认主密码');
+        if (val === null || val === undefined) return;
+        if (which === 'p1') p1 = val; else p2 = val;
+        paint();   // 重绘显示掩码，确认已输入
+      }));
+      $('#vSetup').addEventListener('click', async () => {
+        if (p1.length < 4) return toast('密码至少 4 位');
+        if (p1 !== p2) return toast('两次输入不一致');
+        try {
+          await Vault.setup(p1);
+          toast('密码本已创建');
+          render();
+        } catch (e) { toast(e.message || '创建失败'); }
       });
-    }
-    const doUnlock = async () => {
-      try {
-        await Vault.unlock($('#vpUnlock').value);
-        vaultUnlockedEntries = null;
-        render();
-      } catch (e) { toast('密码错误'); }
     };
-    $('#vUnlock').addEventListener('click', doUnlock);
-    $('#vpUnlock').addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
+    paint();
+  }
+
+  function renderVaultLock() {
+    let pwd = '';
+    const paint = () => {
+      main.innerHTML = `
+        <section class="card vault-hero">
+          <div class="vault-badge">${ICON.lock}</div>
+          <h3>密码本已锁定</h3>
+          <p class="hint block-hint">输入主密码查看内容。离开页面后会自动重新锁定。</p>
+          <div class="field"><label>主密码</label>
+            ${pwdField('unlock', pwd, '点这里输入主密码')}</div>
+          <button class="btn-primary block" id="vUnlock">解锁</button>
+        </section>`;
+      const btn = $('[data-pwd="unlock"]');
+      if (btn) btn.addEventListener('click', async () => {
+        const val = await nativePromptPassword('输入主密码');
+        if (val === null || val === undefined) return;
+        pwd = val;
+        paint();
+      });
+      $('#vUnlock').addEventListener('click', async () => {
+        if (!pwd) return toast('请先输入主密码');
+        try {
+          await Vault.unlock(pwd);
+          vaultUnlockedEntries = null;
+          render();
+        } catch (e) { toast('密码错误'); }
+      });
+    };
+    paint();
   }
 
   function renderVaultList() {
@@ -1463,38 +1476,60 @@
 
   function openVaultEditor(entry) {
     const e = entry || { title: '', account: '', password: '', url: '', note: '', category: '' };
+    let pwdValue = e.password || '';
+    let showPwdValue = false;
+    const renderPwd = () => {
+      const box = $('#vPasswordBox');
+      if (!box) return;
+      box.innerHTML = `<button class="pwd-input-row" id="vPasswordBtn">
+        <span class="pwd-value">${pwdValue ? (showPwdValue ? esc(pwdValue) : '••••••••') : '点这里输入密码'}</span>
+        <span class="pwd-actions">
+          ${pwdValue ? `<button class="icon-btn" id="vToggle2">${ICON.eye}</button>` : ''}
+          <button class="icon-btn" id="vGen" title="生成随机密码">⟳</button>
+        </span>
+      </button>`;
+      $('#vPasswordBtn').addEventListener('click', async ev => {
+        // 点整行时，若点到内部按钮则不重复弹窗
+        if (ev.target.closest('#vToggle2') || ev.target.closest('#vGen')) return;
+        const val = await nativePromptPassword('输入密码');
+        if (val === null || val === undefined) return;
+        pwdValue = val;
+        renderPwd();
+      });
+      const t = $('#vToggle2');
+      if (t) t.addEventListener('click', ev => {
+        ev.stopPropagation(); showPwdValue = !showPwdValue; renderPwd();
+      });
+      const g = $('#vGen');
+      if (g) g.addEventListener('click', async ev => {
+        ev.stopPropagation();
+        const nb = native();
+        pwdValue = (nb && typeof nb.genPassword === 'function')
+          ? nb.genPassword(16) : genPassword(16);
+        showPwdValue = true;
+        renderPwd();
+        toast('已生成 16 位随机密码');
+      });
+    };
+
     openModal(entry ? '编辑记录' : '新增记录', `
       <div class="form-label">名称</div>
       <input type="text" id="vTitle" value="${esc(e.title)}" placeholder="例如：某网站账号">
       <div class="form-label">账号 / 用户名</div>
       <input type="text" id="vAccount" value="${esc(e.account)}" placeholder="登录账号" autocomplete="off">
       <div class="form-label">密码</div>
-      <div class="pwd-input-row">
-        <input type="password" id="vPassword" value="${esc(e.password)}" placeholder="密码" autocomplete="new-password">
-        <button class="icon-btn" id="vToggle2">${ICON.eye}</button>
-        <button class="icon-btn" id="vGen" title="生成随机密码">⟳</button>
-      </div>
+      <div id="vPasswordBox" class="pwd-input-row"></div>
       <div class="form-label">网址（可选）</div>
       <input type="text" id="vUrl" value="${esc(e.url)}" placeholder="https://…">
       <div class="form-label">备注（可选）</div>
       <input type="text" id="vNote" value="${esc(e.note)}" placeholder="安全问题答案等">
       <div class="modal-actions"><button class="btn-primary block" id="vSave">保存</button></div>`);
-    $('#vToggle2').addEventListener('click', () => {
-      const inp = $('#vPassword');
-      const isPwd = inp.type === 'password';
-      inp.type = isPwd ? 'text' : 'password';
-      $('#vToggle2').innerHTML = isPwd ? ICON.eyeOff : ICON.eye;
-    });
-    $('#vGen').addEventListener('click', () => {
-      $('#vPassword').value = genPassword(16);
-      $('#vPassword').type = 'text';
-      toast('已生成 16 位随机密码');
-    });
+    renderPwd();
     $('#vSave').addEventListener('click', async () => {
       const data = {
         title: $('#vTitle').value.trim(),
         account: $('#vAccount').value.trim(),
-        password: $('#vPassword').value,
+        password: pwdValue,
         url: $('#vUrl').value.trim(),
         note: $('#vNote').value.trim(),
         category: e.category || ''
@@ -1510,25 +1545,39 @@
   }
 
   function openChangeVaultPassword() {
-    openModal('修改主密码', `
-      <div class="field"><label>当前密码</label>
-        <input type="password" id="cpOld" autocomplete="current-password"></div>
-      <div class="field"><label>新密码（至少 4 位）</label>
-        <input type="password" id="cpNew" autocomplete="new-password"></div>
-      <div class="field"><label>确认新密码</label>
-        <input type="password" id="cpNew2" autocomplete="new-password"></div>
-      <p class="hint block-hint">修改后所有记录会用新密码重新加密。</p>
-      <div class="modal-actions"><button class="btn-primary block" id="cpSave">确认修改</button></div>`);
-    $('#cpSave').addEventListener('click', async () => {
-      const o = $('#cpOld').value, n = $('#cpNew').value, n2 = $('#cpNew2').value;
-      if (n.length < 4) return toast('新密码至少 4 位');
-      if (n !== n2) return toast('两次输入不一致');
-      try {
-        await Vault.changePassword(o, n);
-        vaultUnlockedEntries = null;
-        closeModal(); render(); toast('主密码已修改');
-      } catch (e) { toast(e.message || '修改失败'); }
-    });
+    let oldPwd = '', newPwd = '', newPwd2 = '';
+    const paint = () => {
+      openModal('修改主密码', `
+        <div class="field"><label>当前密码</label>
+          ${pwdField('cpOld', oldPwd, '点这里输入当前密码')}</div>
+        <div class="field"><label>新密码（至少 4 位）</label>
+          ${pwdField('cpNew', newPwd, '点这里输入新密码')}</div>
+        <div class="field"><label>确认新密码</label>
+          ${pwdField('cpNew2', newPwd2, '点这里确认新密码')}</div>
+        <p class="hint block-hint">修改后所有记录会用新密码重新加密。</p>
+        <div class="modal-actions"><button class="btn-primary block" id="cpSave">确认修改</button></div>`);
+      const labels = { cpOld: '当前密码', cpNew: '新密码', cpNew2: '确认新密码' };
+      $$('[data-pwd]').forEach(b => b.addEventListener('click', async () => {
+        const k = b.dataset.pwd;
+        const val = await nativePromptPassword(labels[k]);
+        if (val === null || val === undefined) return;
+        if (k === 'cpOld') oldPwd = val;
+        else if (k === 'cpNew') newPwd = val;
+        else newPwd2 = val;
+        paint();
+      }));
+      $('#cpSave').addEventListener('click', async () => {
+        const o = oldPwd, n = newPwd, n2 = newPwd2;
+        if (n.length < 4) return toast('新密码至少 4 位');
+        if (n !== n2) return toast('两次输入不一致');
+        try {
+          await Vault.changePassword(o, n);
+          vaultUnlockedEntries = null;
+          closeModal(); render(); toast('主密码已修改');
+        } catch (e) { toast(e.message || '修改失败'); }
+      });
+    };
+    paint();
   }
 
   function genPassword(len) {
