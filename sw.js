@@ -1,4 +1,4 @@
-const CACHE = 'personal-hub-v3';
+const CACHE = 'personal-hub-v4';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
   './css/style.css',
