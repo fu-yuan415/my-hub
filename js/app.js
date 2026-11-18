@@ -30,14 +30,24 @@
     calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3.5v3M16 3.5v3M3.5 10h17"/></svg>',
     coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.5 10h4a1.8 1.8 0 0 1 0 3.6h-4M9.5 10v4"/></svg>',
     down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
-    up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>'
+    up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
+    chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+    eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    eyeOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.7 9.7 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-3.2 3.9"/><path d="M6.3 7.9A15.6 15.6 0 0 0 2.5 12S6 18 12 18a9.6 9.6 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
+    repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>',
+    image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17 4.7-4.7 3.3 3.3 2.4-2.4 4.3 4.3"/></svg>',
+    report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path d="M9 8.5h6M9 12h6M9 15.5h3"/></svg>'
   };
 
   const MODULES = {
     tasks: { name: '任务', icon: 'task', color: '#5b73e8' },
     diary: { name: '日记', icon: 'diary', color: '#e0648b' },
     ledger: { name: '记账', icon: 'ledger', color: '#22a06b' },
-    habits: { name: '习惯', icon: 'habit', color: '#e08a2e' }
+    habits: { name: '习惯', icon: 'habit', color: '#e08a2e' },
+    vault: { name: '密码本', icon: 'lock', color: '#7c5cd6' }
   };
   const MOODS = [
     { e: '😄', t: '很好' }, { e: '🙂', t: '不错' }, { e: '😐', t: '一般' },
@@ -129,19 +139,68 @@
     { key: 'diary', name: '日记', icon: 'diary' },
     { key: 'ledger', name: '记账', icon: 'ledger' },
     { key: 'habits', name: '习惯', icon: 'habit' },
+    { key: 'vault', name: '密码本', icon: 'lock' },
+    { key: 'stats', name: '统计', icon: 'chart' },
     { key: 'settings', name: '设置', icon: 'settings' }
   ];
 
+  /* 底部导航最多 5 项：固定「今日」开头、「设置」结尾，中间放已开启的模块（最多 3 个） */
+  function navItems() {
+    const mid = ['tasks', 'diary', 'ledger', 'habits', 'vault']
+      .filter(k => Store.isModuleOn(k))
+      .map(k => ({ key: k, name: MODULES[k].name, icon: MODULES[k].icon }));
+
+    const items = [{ key: 'today', name: '今日', icon: 'home' }];
+    // 中间最多 3 项，保证 today + 3 + settings = 5
+    items.push(...mid.slice(0, 3));
+    // 中间不足 3 个时，用统计补足（统计始终可达）
+    if (mid.length < 3) items.push({ key: 'stats', name: '统计', icon: 'chart' });
+    items.push({ key: 'settings', name: '设置', icon: 'settings' });
+    return items;
+  }
+
+  let moreOpen = false;
+
   function renderNav() {
     const nav = $('.bottom-nav');
-    nav.innerHTML = NAV.filter(n => {
-      if (n.key === 'today' || n.key === 'settings') return true;
-      return Store.isModuleOn(n.key);
-    }).map(n => `
+    const items = navItems();
+    // 判断是否有未展示的模块
+    const shown = new Set(items.map(i => i.key));
+    const hidden = ['tasks', 'diary', 'ledger', 'habits', 'vault']
+      .filter(k => Store.isModuleOn(k) && !shown.has(k));
+
+    nav.innerHTML = items.map(n => `
       <button class="nav-item ${currentPage === n.key ? 'active' : ''}" data-page="${n.key}">
         <span class="nav-icon">${ICON[n.icon]}</span><span class="nav-label">${n.name}</span>
-      </button>`).join('');
-    $$('.nav-item').forEach(btn => btn.addEventListener('click', () => go(btn.dataset.page)));
+      </button>`).join('') + (hidden.length ? `
+      <button class="nav-item ${hidden.includes(currentPage) ? 'active' : ''}" id="navMore">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18" cy="12" r="1.8"/></svg></span>
+        <span class="nav-label">更多</span>
+      </button>` : '');
+
+    $$('.nav-item[data-page]').forEach(btn =>
+      btn.addEventListener('click', () => go(btn.dataset.page)));
+
+    const more = $('#navMore');
+    if (more) more.addEventListener('click', () => openMoreSheet(hidden));
+  }
+
+  function openMoreSheet(hidden) {
+    openModal('更多功能', `
+      <div class="more-grid">
+        ${hidden.map(k => `
+          <button class="more-item" data-go="${k}">
+            <span class="shortcut-ico" style="--c:${MODULES[k].color}">${ICON[MODULES[k].icon]}</span>
+            <span>${MODULES[k].name}</span>
+          </button>`).join('')}
+        <button class="more-item" data-go="stats">
+          <span class="shortcut-ico" style="--c:#5b73e8">${ICON.chart}</span>
+          <span>统计</span>
+        </button>
+      </div>`);
+    $$('.more-item').forEach(el => el.addEventListener('click', () => {
+      closeModal(); go(el.dataset.go);
+    }));
   }
 
   function go(page) {
@@ -161,18 +220,20 @@
 
     const titles = {
       today: s.nickname ? `${greetingShort()}，${s.nickname}` : greetingShort(),
-      tasks: '任务', diary: '日记', ledger: '记账', habits: '习惯', settings: '设置'
+      tasks: '任务', diary: '日记', ledger: '记账', habits: '习惯',
+      vault: '密码本', stats: '统计', settings: '设置'
     };
     pageTitle.textContent = titles[currentPage] || greetingShort();
 
     const pages = {
       today: renderToday, tasks: renderTasks, diary: renderDiary,
-      ledger: renderLedger, habits: renderHabits, settings: renderSettings
+      ledger: renderLedger, habits: renderHabits, vault: renderVault,
+      stats: renderStats, settings: renderSettings
     };
     (pages[currentPage] || renderToday)();
 
-    fab.style.display = (currentPage === 'tasks' || currentPage === 'ledger' || currentPage === 'habits')
-      ? 'flex' : 'none';
+    fab.style.display = (currentPage === 'tasks' || currentPage === 'ledger'
+      || currentPage === 'habits' || currentPage === 'vault') ? 'flex' : 'none';
   }
 
   function greetingShort() {
@@ -250,6 +311,10 @@
             <span class="shortcut-ico" style="--c:${MODULES[k].color}">${ICON[MODULES[k].icon]}</span>
             <span class="shortcut-name">${MODULES[k].name}</span>
           </button>`).join('')}
+        <button class="shortcut" id="reviewBtn">
+          <span class="shortcut-ico" style="--c:#5b73e8">${ICON.report}</span>
+          <span class="shortcut-name">月回顾</span>
+        </button>
       </div>
     </section>`;
 
@@ -258,6 +323,8 @@
     $$('[data-habit]').forEach(el => el.addEventListener('click', () => {
       Store.toggleHabit(el.dataset.habit); render();
     }));
+    const rb = $('#reviewBtn');
+    if (rb) rb.addEventListener('click', openReview);
   }
 
   function statCard(icon, color, value, label) {
@@ -662,6 +729,14 @@
         <input type="file" id="importFile" accept=".json" hidden>
       </section>
       <section class="card">
+        <div class="card-head"><h3>密码本</h3></div>
+        <p class="hint block-hint">密码本内容使用独立主密码加密存储，忘记密码无法恢复。备份文件里的密码本内容同样处于加密状态。</p>
+        ${Store.hasVault()
+          ? `<div class="btn-row"><button class="btn-ghost" id="vaultGo">进入</button>
+             <button class="btn-ghost danger" id="vaultReset">重置密码本</button></div>`
+          : `<p class="hint" style="margin:0">尚未创建密码本，进入「密码本」页面设置。</p>`}
+      </section>
+      <section class="card">
         <div class="card-head"><h3>关于</h3></div>
         <p class="hint block-hint">个人本地应用 · 数据不上传服务器 · 安装后可从桌面直接打开</p>
       </section>
@@ -692,6 +767,18 @@
       toast('备份已导出');
     });
     $('#importBtn').addEventListener('click', () => $('#importFile').click());
+    const vaultGo = $('#vaultGo');
+    if (vaultGo) vaultGo.addEventListener('click', () => go('vault'));
+    const vaultReset = $('#vaultReset');
+    if (vaultReset) vaultReset.addEventListener('click', async () => {
+      if (await uiConfirm('重置将删除密码本的全部记录，且无法恢复。确定继续？',
+        { danger: true, confirmText: '重置' })) {
+        Store.resetVault();
+        vaultUnlockedEntries = null;
+        Vault.lock();
+        render(); toast('密码本已重置');
+      }
+    });
     $('#importFile').addEventListener('change', e => {
       const f = e.target.files[0];
       if (!f) return;
@@ -718,15 +805,496 @@
     }[k] || '';
   }
 
+  /* ---------- 密码本 ---------- */
+  let vaultUnlockedEntries = null;   // 解锁后内存缓存
+
+  function renderVault() {
+    if (!Vault.isSupported()) {
+      main.innerHTML = `<div class="card">${emptyState('当前环境不支持加密功能')}</div>`;
+      return;
+    }
+    if (!Vault.isInitialized()) return renderVaultSetup();
+    if (!Vault.isUnlocked()) return renderVaultLock();
+    return renderVaultList();
+  }
+
+  function renderVaultSetup() {
+    main.innerHTML = `
+      <section class="card vault-hero">
+        <div class="vault-badge">${ICON.lock}</div>
+        <h3>设置密码本主密码</h3>
+        <p class="hint block-hint">密码本里的内容会用这个密码加密后保存在本机，不上传。密码只在你脑中，忘记将无法恢复内容，请牢记。</p>
+        <div class="field"><label>设置密码（至少 4 位）</label>
+          <input type="password" id="vp1" placeholder="输入主密码" autocomplete="new-password"></div>
+        <div class="field"><label>再输一次</label>
+          <input type="password" id="vp2" placeholder="确认主密码" autocomplete="new-password"></div>
+        <button class="btn-primary block" id="vSetup">创建密码本</button>
+      </section>`;
+    $('#vSetup').addEventListener('click', async () => {
+      const p1 = $('#vp1').value, p2 = $('#vp2').value;
+      if (p1.length < 4) return toast('密码至少 4 位');
+      if (p1 !== p2) return toast('两次输入不一致');
+      try {
+        await Vault.setup(p1);
+        toast('密码本已创建');
+        render();
+      } catch (e) { toast(e.message || '创建失败'); }
+    });
+  }
+
+  function renderVaultLock() {
+    main.innerHTML = `
+      <section class="card vault-hero">
+        <div class="vault-badge">${ICON.lock}</div>
+        <h3>密码本已锁定</h3>
+        <p class="hint block-hint">输入主密码查看内容。离开页面后会自动重新锁定。</p>
+        <div class="field"><label>主密码</label>
+          <input type="password" id="vpUnlock" placeholder="输入密码" autocomplete="current-password"></div>
+        <button class="btn-primary block" id="vUnlock">解锁</button>
+      </section>`;
+    const doUnlock = async () => {
+      try {
+        await Vault.unlock($('#vpUnlock').value);
+        vaultUnlockedEntries = null;
+        render();
+      } catch (e) { toast('密码错误'); }
+    };
+    $('#vUnlock').addEventListener('click', doUnlock);
+    $('#vpUnlock').addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
+  }
+
+  function renderVaultList() {
+    if (!vaultUnlockedEntries) {
+      Vault.getEntries().then(list => {
+        vaultUnlockedEntries = list;
+        renderVaultList();
+      }).catch(() => { toast('读取失败'); });
+      main.innerHTML = `<div class="card">${emptyState('解密中…')}</div>`;
+      return;
+    }
+    const list = vaultUnlockedEntries;
+    let html = `
+      <div class="vault-topbar">
+        <div class="vault-count">${list.length} 条记录</div>
+        <div class="vault-actions">
+          <button class="icon-btn" id="vLock" title="锁定">${ICON.lock}</button>
+          <button class="icon-btn" id="vPwd" title="修改主密码">⚙</button>
+        </div>
+      </div>`;
+    if (!list.length) {
+      html += emptyState('还没有记录，点右下角 + 添加');
+    } else {
+      html += list.map(e => `
+        <div class="row-card vault-row">
+          <div class="vault-ico">${esc((e.title || '?').slice(0, 1))}</div>
+          <div class="vault-info">
+            <strong>${esc(e.title || '未命名')}</strong>
+            <span>${esc(e.account || '无账号')}</span>
+          </div>
+          <button class="icon-btn" data-vshow="${e.id}" title="查看">${ICON.eye}</button>
+        </div>`).join('');
+    }
+    main.innerHTML = html;
+
+    $('#vLock').addEventListener('click', () => {
+      Vault.lock(); vaultUnlockedEntries = null; render(); toast('已锁定');
+    });
+    $('#vPwd').addEventListener('click', openChangeVaultPassword);
+    $$('[data-vshow]').forEach(el => el.addEventListener('click', () => {
+      openVaultDetail(el.dataset.vshow);
+    }));
+  }
+
+  function openVaultDetail(id) {
+    const e = (vaultUnlockedEntries || []).find(x => x.id === id);
+    if (!e) return;
+    let showPwd = false;
+    openModal(e.title || '未命名', `
+      <div class="detail-list">
+        <div class="detail-row"><span>账号</span>
+          <div class="detail-val"><code id="dAcc">${esc(e.account || '—')}</code>
+            ${e.account ? `<button class="icon-btn" data-copy="${esc(e.account)}">${ICON.copy}</button>` : ''}</div>
+        </div>
+        <div class="detail-row"><span>密码</span>
+          <div class="detail-val"><code id="dPwd">••••••••</code>
+            <button class="icon-btn" id="dToggle">${ICON.eye}</button>
+            <button class="icon-btn" data-copy="${esc(e.password || '')}">${ICON.copy}</button></div>
+        </div>
+        ${e.url ? `<div class="detail-row"><span>网址</span><div class="detail-val"><span class="wrap-text">${esc(e.url)}</span></div></div>` : ''}
+        ${e.category ? `<div class="detail-row"><span>分类</span><div class="detail-val">${esc(e.category)}</div></div>` : ''}
+        ${e.note ? `<div class="detail-row"><span>备注</span><div class="detail-val"><span class="wrap-text">${esc(e.note)}</span></div></div>` : ''}
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ghost danger" id="vDel">删除</button>
+        <button class="btn-primary" id="vEdit">编辑</button>
+      </div>`);
+    $('#dToggle').addEventListener('click', () => {
+      showPwd = !showPwd;
+      $('#dPwd').textContent = showPwd ? (e.password || '—') : '••••••••';
+      $('#dToggle').innerHTML = showPwd ? ICON.eyeOff : ICON.eye;
+    });
+    $$('[data-copy]').forEach(b => b.addEventListener('click', () => {
+      copyText(b.dataset.copy);
+    }));
+    $('#vDel').addEventListener('click', async () => {
+      if (await uiConfirm('删除这条密码记录？', { danger: true, confirmText: '删除' })) {
+        await Vault.deleteEntry(e.id);
+        vaultUnlockedEntries = null;
+        closeModal(); render(); toast('已删除');
+      }
+    });
+    $('#vEdit').addEventListener('click', () => { closeModal(); openVaultEditor(e); });
+  }
+
+  function openVaultEditor(entry) {
+    const e = entry || { title: '', account: '', password: '', url: '', note: '', category: '' };
+    openModal(entry ? '编辑记录' : '新增记录', `
+      <div class="form-label">名称</div>
+      <input type="text" id="vTitle" value="${esc(e.title)}" placeholder="例如：某网站账号">
+      <div class="form-label">账号 / 用户名</div>
+      <input type="text" id="vAccount" value="${esc(e.account)}" placeholder="登录账号" autocomplete="off">
+      <div class="form-label">密码</div>
+      <div class="pwd-input-row">
+        <input type="password" id="vPassword" value="${esc(e.password)}" placeholder="密码" autocomplete="new-password">
+        <button class="icon-btn" id="vToggle2">${ICON.eye}</button>
+        <button class="icon-btn" id="vGen" title="生成随机密码">⟳</button>
+      </div>
+      <div class="form-label">网址（可选）</div>
+      <input type="text" id="vUrl" value="${esc(e.url)}" placeholder="https://…">
+      <div class="form-label">备注（可选）</div>
+      <input type="text" id="vNote" value="${esc(e.note)}" placeholder="安全问题答案等">
+      <div class="modal-actions"><button class="btn-primary block" id="vSave">保存</button></div>`);
+    $('#vToggle2').addEventListener('click', () => {
+      const inp = $('#vPassword');
+      const isPwd = inp.type === 'password';
+      inp.type = isPwd ? 'text' : 'password';
+      $('#vToggle2').innerHTML = isPwd ? ICON.eyeOff : ICON.eye;
+    });
+    $('#vGen').addEventListener('click', () => {
+      $('#vPassword').value = genPassword(16);
+      $('#vPassword').type = 'text';
+      toast('已生成 16 位随机密码');
+    });
+    $('#vSave').addEventListener('click', async () => {
+      const data = {
+        title: $('#vTitle').value.trim(),
+        account: $('#vAccount').value.trim(),
+        password: $('#vPassword').value,
+        url: $('#vUrl').value.trim(),
+        note: $('#vNote').value.trim(),
+        category: e.category || ''
+      };
+      if (!data.title) return toast('请输入名称');
+      try {
+        if (entry) await Vault.updateEntry(entry.id, data);
+        else await Vault.addEntry(data);
+        vaultUnlockedEntries = null;
+        closeModal(); render(); toast('已保存');
+      } catch (err) { toast('保存失败'); }
+    });
+  }
+
+  function openChangeVaultPassword() {
+    openModal('修改主密码', `
+      <div class="field"><label>当前密码</label>
+        <input type="password" id="cpOld" autocomplete="current-password"></div>
+      <div class="field"><label>新密码（至少 4 位）</label>
+        <input type="password" id="cpNew" autocomplete="new-password"></div>
+      <div class="field"><label>确认新密码</label>
+        <input type="password" id="cpNew2" autocomplete="new-password"></div>
+      <p class="hint block-hint">修改后所有记录会用新密码重新加密。</p>
+      <div class="modal-actions"><button class="btn-primary block" id="cpSave">确认修改</button></div>`);
+    $('#cpSave').addEventListener('click', async () => {
+      const o = $('#cpOld').value, n = $('#cpNew').value, n2 = $('#cpNew2').value;
+      if (n.length < 4) return toast('新密码至少 4 位');
+      if (n !== n2) return toast('两次输入不一致');
+      try {
+        await Vault.changePassword(o, n);
+        vaultUnlockedEntries = null;
+        closeModal(); render(); toast('主密码已修改');
+      } catch (e) { toast(e.message || '修改失败'); }
+    });
+  }
+
+  function genPassword(len) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    const arr = new Uint32Array(len);
+    crypto.getRandomValues(arr);
+    let out = '';
+    for (let i = 0; i < len; i++) out += chars[arr[i] % chars.length];
+    return out;
+  }
+
+  function copyText(text) {
+    if (!text) return;
+    const done = () => toast('已复制');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else fallbackCopy(text, done);
+  }
+  function fallbackCopy(text, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); cb(); } catch (e) { toast('复制失败'); }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------- 统计 ---------- */
+  function renderStats() {
+    const today = Store.todayKey();
+    const tasks = Store.getTasks();
+    const ledger = Store.getLedger();
+    const diaries = Store.getAllDiaries();
+    const habits = Store.getHabits();
+
+    /* 近 7 天任务完成情况 */
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const k = Store.dateKey(d);
+      const dayTasks = tasks.filter(t => t.date === k);
+      days.push({
+        key: k,
+        label: `${d.getMonth() + 1}/${d.getDate()}`,
+        total: dayTasks.length,
+        done: dayTasks.filter(t => t.done).length
+      });
+    }
+    const maxTask = Math.max(1, ...days.map(d => d.total));
+
+    /* 近 7 天支出 */
+    const spendDays = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const k = Store.dateKey(d);
+      const amt = ledger.filter(r => r.date === k && r.type === 'expense')
+        .reduce((a, r) => a + r.amount, 0);
+      spendDays.push({ label: `${d.getMonth() + 1}/${d.getDate()}`, amount: amt });
+    }
+    const maxSpend = Math.max(1, ...spendDays.map(d => d.amount));
+
+    /* 习惯完成热力（近 5 周） */
+    const heat = [];
+    for (let i = 34; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const k = Store.dateKey(d);
+      const cnt = habits.filter(h => h.records[k]).length;
+      heat.push({ key: k, count: cnt, ratio: habits.length ? cnt / habits.length : 0 });
+    }
+
+    /* 本月汇总 */
+    const m = monthKey(new Date());
+    const monthLedger = ledger.filter(r => (r.date || '').startsWith(m));
+    const mExpense = monthLedger.filter(r => r.type === 'expense').reduce((a, r) => a + r.amount, 0);
+    const mIncome = monthLedger.filter(r => r.type === 'income').reduce((a, r) => a + r.amount, 0);
+    const monthDiaries = diaries.filter(d => d.date.startsWith(m)).length;
+    const monthTasksDone = tasks.filter(t => t.done && (t.date || '').startsWith(m)).length;
+    const totalStreak = habits.reduce((a, h) => a + Store.habitStreak(h), 0);
+
+    let html = `
+      <section class="card">
+        <div class="card-head"><h3>本月概览</h3></div>
+        <div class="overview-grid">
+          <div class="ov-item"><strong>${monthTasksDone}</strong><span>完成任务</span></div>
+          <div class="ov-item"><strong>${monthDiaries}</strong><span>篇日记</span></div>
+          <div class="ov-item"><strong>${fmtMoney(mExpense)}</strong><span>支出</span></div>
+          <div class="ov-item"><strong>${fmtMoney(mIncome)}</strong><span>收入</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h3>近 7 天任务</h3><span class="hint">完成 / 总数</span></div>
+        <div class="chart-bars">
+          ${days.map(d => `
+            <div class="chart-col">
+              <div class="chart-bar-wrap">
+                <div class="chart-bar" style="height:${d.total ? Math.max(8, d.total / maxTask * 100) : 3}%">
+                  <div class="chart-bar-fill" style="height:${d.total ? (d.done / d.total * 100) : 0}%"></div>
+                </div>
+              </div>
+              <span class="chart-x">${d.label}</span>
+            </div>`).join('')}
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h3>近 7 天支出</h3><span class="hint">${fmtMoney(spendDays.reduce((a, d) => a + d.amount, 0))}</span></div>
+        <div class="chart-bars">
+          ${spendDays.map(d => `
+            <div class="chart-col">
+              <div class="chart-bar-wrap">
+                <div class="chart-bar spend" style="height:${d.amount ? Math.max(6, d.amount / maxSpend * 100) : 3}%"></div>
+              </div>
+              <span class="chart-x">${d.label}</span>
+            </div>`).join('')}
+        </div>
+      </section>`;
+
+    if (habits.length) {
+      html += `<section class="card">
+        <div class="card-head"><h3>习惯热力</h3><span class="hint">近 5 周</span></div>
+        <div class="heat-grid">
+          ${heat.map(h => {
+            const lv = habits.length === 0 ? 0 : Math.ceil(h.ratio * 4);
+            return `<div class="heat-cell lv${lv}" title="${h.key}：${h.count} 项"></div>`;
+          }).join('')}
+        </div>
+        <div class="heat-legend"><span>少</span><i class="heat-cell lv0"></i><i class="heat-cell lv1"></i><i class="heat-cell lv2"></i><i class="heat-cell lv3"></i><i class="heat-cell lv4"></i><span>多</span></div>
+      </section>`;
+    }
+
+    if (habits.length) {
+      html += `<section class="card">
+        <div class="card-head"><h3>习惯连续天数</h3></div>
+        ${habits.map(h => `
+          <div class="streak-row">
+            <span class="streak-name">${esc(h.icon)} ${esc(h.name)}</span>
+            <span class="streak-val">${Store.habitStreak(h)} 天</span>
+          </div>`).join('')}
+        <div class="hint" style="margin-top:10px">累计连续 ${totalStreak} 天</div>
+      </section>`;
+    }
+
+    main.innerHTML = html;
+  }
+
+  /* ---------- 周/月回顾 ---------- */
+  function openReview() {
+    const now = new Date();
+    const m = monthKey(now);
+    const tasks = Store.getTasks();
+    const diaries = Store.getAllDiaries();
+    const ledger = Store.getLedger();
+    const habits = Store.getHabits();
+
+    const monthLedger = ledger.filter(r => (r.date || '').startsWith(m));
+    const expense = monthLedger.filter(r => r.type === 'expense').reduce((a, r) => a + r.amount, 0);
+    const income = monthLedger.filter(r => r.type === 'income').reduce((a, r) => a + r.amount, 0);
+    const monthDiary = diaries.filter(d => d.date.startsWith(m));
+    const monthTasks = tasks.filter(t => (t.date || '').startsWith(m));
+    const monthDone = monthTasks.filter(t => t.done);
+    const rate = monthTasks.length ? Math.round(monthDone.length / monthTasks.length * 100) : 0;
+
+    const catSum = {};
+    monthLedger.filter(r => r.type === 'expense').forEach(r => {
+      catSum[r.category] = (catSum[r.category] || 0) + r.amount;
+    });
+    const topCats = Object.entries(catSum).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+    const moods = {};
+    monthDiary.forEach(d => { if (d.mood) moods[d.mood] = (moods[d.mood] || 0) + 1; });
+    const topMood = Object.entries(moods).sort((a, b) => b[1] - a[1])[0];
+
+    openModal(`${now.getFullYear()} 年 ${now.getMonth() + 1} 月回顾`, `
+      <div class="review-block">
+        <div class="review-title">任务</div>
+        <p class="review-text">本月共 <b>${monthTasks.length}</b> 项任务，完成 <b>${monthDone.length}</b> 项，完成率 <b>${rate}%</b>。</p>
+      </div>
+      <div class="review-block">
+        <div class="review-title">日记</div>
+        <p class="review-text">写了 <b>${monthDiary.length}</b> 篇日记${topMood ? `，最常出现的心情是 ${topMood[0]}（${topMood[1]} 次）` : ''}。</p>
+      </div>
+      <div class="review-block">
+        <div class="review-title">收支</div>
+        <p class="review-text">支出 <b>${fmtMoney(expense)}</b>，收入 <b>${fmtMoney(income)}</b>，结余 <b>${fmtMoney(income - expense)}</b>。</p>
+        ${topCats.length ? `<p class="review-text">主要花在：${topCats.map(([c, v]) => `${c} ${fmtMoney(v)}`).join('、')}。</p>` : ''}
+      </div>
+      <div class="review-block">
+        <div class="review-title">习惯</div>
+        <p class="review-text">${habits.length ? habits.map(h => `${esc(h.name)} ${Store.habitStreak(h)} 天`).join('、') : '还没有设置习惯。'}</p>
+      </div>
+      <div class="modal-actions"><button class="btn-primary block" id="closeReview">好的</button></div>`);
+    $('#closeReview').addEventListener('click', closeModal);
+  }
+
+  /* ---------- 全局搜索 ---------- */
+  let searchQuery = '';
+
+  function openSearch() {
+    searchQuery = '';
+    openModal('搜索', `
+      <div class="search-bar">
+        <span class="search-ico">${ICON.search}</span>
+        <input type="search" id="searchInput" placeholder="搜索任务、日记、账目" autocomplete="off">
+      </div>
+      <div id="searchResults" class="search-results">${emptyState('输入关键词开始搜索')}</div>`);
+    const input = $('#searchInput');
+    input.focus();
+    input.addEventListener('input', () => {
+      searchQuery = input.value.trim();
+      renderSearchResults();
+    });
+    renderSearchResults();
+  }
+
+  function renderSearchResults() {
+    const box = $('#searchResults');
+    if (!box) return;
+    const q = searchQuery.toLowerCase();
+    if (!q) { box.innerHTML = emptyState('输入关键词开始搜索'); return; }
+
+    const tasks = Store.getTasks().filter(t => t.text.toLowerCase().includes(q));
+    const diaries = Store.getAllDiaries().filter(d => (d.content || '').toLowerCase().includes(q));
+    const ledger = Store.getLedger().filter(r =>
+      (r.note || '').toLowerCase().includes(q) ||
+      (r.category || '').toLowerCase().includes(q));
+
+    const total = tasks.length + diaries.length + ledger.length;
+    if (!total) { box.innerHTML = emptyState(`没有找到「${esc(searchQuery)}」相关内容`); return; }
+
+    let html = '';
+    if (tasks.length) {
+      html += `<div class="search-group">任务 (${tasks.length})</div>`;
+      html += tasks.slice(0, 8).map(t => `
+        <div class="row-card search-item" data-go="tasks">
+          <span class="search-tag">任务</span>
+          <span class="search-text">${esc(t.text)}${t.done ? ' <span class="hint">（已完成）</span>' : ''}</span>
+        </div>`).join('');
+    }
+    if (diaries.length) {
+      html += `<div class="search-group">日记 (${diaries.length})</div>`;
+      html += diaries.slice(0, 8).map(d => `
+        <div class="row-card search-item" data-diary="${d.date}">
+          <span class="search-tag diary">日记</span>
+          <span class="search-text">${d.date} · ${esc((d.content || '').slice(0, 50))}</span>
+        </div>`).join('');
+    }
+    if (ledger.length) {
+      html += `<div class="search-group">记账 (${ledger.length})</div>`;
+      html += ledger.slice(0, 8).map(r => `
+        <div class="row-card search-item" data-go="ledger">
+          <span class="search-tag ledger">记账</span>
+          <span class="search-text">${r.date} ${esc(r.category)} ${r.type === 'income' ? '+' : '−'}${fmtMoney(r.amount)} ${esc(r.note || '')}</span>
+        </div>`).join('');
+    }
+    box.innerHTML = html;
+    box.querySelectorAll('[data-go]').forEach(el => el.addEventListener('click', () => {
+      closeModal(); go(el.dataset.go);
+    }));
+    box.querySelectorAll('[data-diary]').forEach(el => el.addEventListener('click', () => {
+      closeModal(); openDiaryEditor(el.dataset.diary);
+    }));
+  }
+
   /* ---------- FAB ---------- */
   fab.addEventListener('click', () => {
     if (currentPage === 'ledger') openLedgerModal();
     else if (currentPage === 'habits') { const el = $('#habitInput'); el && el.focus(); }
     else if (currentPage === 'tasks') { const el = $('#taskInput'); el && el.focus(); }
+    else if (currentPage === 'vault') {
+      if (Vault.isUnlocked()) openVaultEditor(null);
+      else toast('请先解锁密码本');
+    }
   });
 
   modal.querySelector('.modal-backdrop').addEventListener('click', closeModal);
   $('#modalClose').addEventListener('click', closeModal);
+  const searchBtn = $('#searchBtn');
+  if (searchBtn) searchBtn.addEventListener('click', openSearch);
 
   /* ---------- 启动 ---------- */
   if ('serviceWorker' in navigator) {
@@ -734,4 +1302,12 @@
   }
   renderNav();
   render();
+
+  /* 测试钩子（仅在自动化测试时使用，不影响正常运行） */
+  if (typeof window !== 'undefined' && window.__DSH_TEST__) {
+    window.__hooks = {
+      go, renderToday, renderTasks, renderDiary, renderLedger,
+      renderHabits, renderVault, renderStats, renderSettings, renderNav
+    };
+  }
 })();

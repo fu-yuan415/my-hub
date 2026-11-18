@@ -7,6 +7,7 @@ const Store = (() => {
     diaries: {},   // { '2026-11-17': { content, mood, updatedAt } }
     ledger: [],    // { id, type:'expense'|'income', amount, category, note, date, createdAt }
     habits: [],    // { id, name, icon, records:{'2026-11-17':true}, createdAt }
+    vault: { config: null, entries: [] },   // 密码本（内容加密存储）
     settings: {
       theme: 'light',
       nickname: '',
@@ -27,6 +28,9 @@ const Store = (() => {
         diaries: parsed.diaries && typeof parsed.diaries === 'object' ? parsed.diaries : {},
         ledger: Array.isArray(parsed.ledger) ? parsed.ledger : [],
         habits: Array.isArray(parsed.habits) ? parsed.habits : [],
+        vault: (parsed.vault && typeof parsed.vault === 'object')
+          ? { config: parsed.vault.config || null, entries: Array.isArray(parsed.vault.entries) ? parsed.vault.entries : [] }
+          : { config: null, entries: [] },
         settings: {
           theme: parsed.settings && parsed.settings.theme === 'dark' ? 'dark' : 'light',
           nickname: (parsed.settings && parsed.settings.nickname) || '',
@@ -201,6 +205,35 @@ const Store = (() => {
     return isModuleOn(key);
   }
 
+  /* ---- 密码本 ---- */
+  function getVaultConfig() {
+    return data.vault ? data.vault.config : null;
+  }
+
+  function saveVaultConfig(config) {
+    if (!data.vault) data.vault = { config: null, entries: [] };
+    data.vault.config = config;
+    save();
+  }
+
+  function getVaultEntries() {
+    return (data.vault && Array.isArray(data.vault.entries)) ? data.vault.entries : [];
+  }
+
+  function saveVaultEntries(entries) {
+    if (!data.vault) data.vault = { config: null, entries: [] };
+    data.vault.entries = entries;
+    save();
+  }
+
+  function hasVault() {
+    return !!(data.vault && data.vault.config && data.vault.config.salt);
+  }
+
+  function resetVault() {
+    if (data.vault) { data.vault = { config: null, entries: [] }; save(); }
+  }
+
   /* ---- 导入导出 ---- */
   function exportJSON() { return JSON.stringify(data, null, 2); }
 
@@ -213,6 +246,9 @@ const Store = (() => {
       diaries: parsed.diaries && typeof parsed.diaries === 'object' ? parsed.diaries : {},
       ledger: Array.isArray(parsed.ledger) ? parsed.ledger : [],
       habits: Array.isArray(parsed.habits) ? parsed.habits : [],
+      vault: (parsed.vault && typeof parsed.vault === 'object')
+        ? { config: parsed.vault.config || null, entries: Array.isArray(parsed.vault.entries) ? parsed.vault.entries : [] }
+        : { config: null, entries: [] },
       settings: {
         theme: parsed.settings && parsed.settings.theme === 'dark' ? 'dark' : 'light',
         nickname: (parsed.settings && parsed.settings.nickname) || '',
@@ -235,6 +271,7 @@ const Store = (() => {
     getLedger, addRecord, deleteRecord, ledgerStats,
     getHabits, addHabit, toggleHabit, deleteHabit, habitStreak,
     getSettings, setSetting, isModuleOn, toggleModule,
+    getVaultConfig, saveVaultConfig, getVaultEntries, saveVaultEntries, hasVault, resetVault,
     exportJSON, importJSON, clearAll
   };
 })();
