@@ -4,14 +4,17 @@ const Store = (() => {
 
   const defaultData = () => ({
     tasks: [],
-    diaries: {},   // { '2026-11-17': { content, mood, updatedAt } }
+    diaries: {},   // 旧格式（保留兼容）：{ '2026-11-17': { content, mood, updatedAt } }
+    diaryV2: [],   // 新格式：一天多篇 [{ id, date, content, mood, images, createdAt, updatedAt }]
+    migratedV2: false,  // 是否已从旧 diaries 迁移
+    schedule: [],  // 日程 [{ id, date, time, title, note, createdAt }]
     ledger: [],    // { id, type:'expense'|'income', amount, category, note, date, createdAt }
     habits: [],    // { id, name, icon, records:{'2026-11-17':true}, createdAt }
     vault: { config: null, entries: [] },   // 密码本（内容加密存储）
     settings: {
       theme: 'light',
       nickname: '',
-      modules: { tasks: true, diary: true, ledger: true, habits: true }
+      modules: { tasks: true, diary: true, ledger: true, habits: true, calendar: true }
     }
   });
 
@@ -26,6 +29,9 @@ const Store = (() => {
       return {
         tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
         diaries: parsed.diaries && typeof parsed.diaries === 'object' ? parsed.diaries : {},
+        diaryV2: Array.isArray(parsed.diaryV2) ? parsed.diaryV2 : [],
+        migratedV2: !!parsed.migratedV2,
+        schedule: Array.isArray(parsed.schedule) ? parsed.schedule : [],
         ledger: Array.isArray(parsed.ledger) ? parsed.ledger : [],
         habits: Array.isArray(parsed.habits) ? parsed.habits : [],
         vault: (parsed.vault && typeof parsed.vault === 'object')
@@ -155,42 +161,149 @@ const Store = (() => {
     data.tasks = data.tasks.filter(x => x.id !== id); save();
   }
 
-  /* ---- 日记 ---- */
-  function getDiary(date) { return data.diaries[date] || null; }
+  /* ---- 日记（v2：一天多篇） ---- */
+
+  /** 首次访问时把旧 diaries（一天一篇）迁移成 diaryV2，绝不丢数据 */
+  function ensureMigrated() {
+    if (data.migratedV2) return;
+    const old = data.diaries || {};
+    Object.keys(old).sort().forEach(date => {
+      const rec = old[date];
+      if (!rec) return;
+      // 若 v2 中该日期已有内容，跳过（避免重复）
+      if (data.diaryV2.some(x => x.date === date)) return;
+      data.diaryV2.push({
+        id: uid(), date,
+        content: String(rec.content || ''),
+        mood: rec.mood || '',
+        images: Array.isArray(rec.images) ? rec.images : [],
+        createdAt: rec.updatedAt || Date.now(),
+        updatedAt: rec.updatedAt || Date.now(),
+        migrated: true
+      });
+    });
+    data.migratedV2 = true;
+    save();
+  }
+
+  /** 兼容旧调用：返回当天最新一篇 */
+  function getDiary(date) {
+    const list = getDiariesByDate(date);
+    return list.length ? list[0] : null;
+  }
+
+  function getDiariesByDate(date) {
+    ensureMigrated();
+    return data.diaryV2.filter(x => x.date === date)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+
+  function getDiaryById(id) {
+    ensureMigrated();
+    return data.diaryV2.find(x => x.id === id) || null;
+  }
 
   function getAllDiaries() {
-    return Object.keys(data.diaries).sort().reverse()
-      .map(k => ({ date: k, ...data.diaries[k] }));
+    ensureMigrated();
+    return data.diaryV2.slice().sort((a, b) => {
+      const d = (b.date || '').localeCompare(a.date || '');
+      return d !== 0 ? d : (b.createdAt || 0) - (a.createdAt || 0);
+    });
+  }
+
+  /** 新增一篇日记（同一天可多次） */
+  function addDiary(date, content, mood, images) {
+    ensureMigrated();
+    const now = Date.now();
+    const rec = {
+      id: uid(), date,
+      content: String(content || ''),
+      mood: mood || '',
+      images: Array.isArray(images) ? images : [],
+      createdAt: now, updatedAt: now
+    };
+    data.diaryV2.push(rec);
+    save();
+    return rec;
+  }
+
+  /** 更新指定 id 的日记 */
+  function updateDiary(id, patch) {
+    ensureMigrated();
+    const rec = data.diaryV2.find(x => x.id === id);
+    if (!rec) return null;
+    Object.assign(rec, patch, { updatedAt: Date.now() });
+    save();
+    return rec;
   }
 
   function saveDiary(date, content, mood, images) {
-    data.diaries[date] = {
-      content: String(content || ''),
-      mood: mood || '',
-      images: Array.isArray(images) ? images : (data.diaries[date]?.images || []),
-      updatedAt: Date.now()
-    };
-    save();
+    // 兼容旧调用：写入当天最新一篇，没有则新建
+    ensureMigrated();
+    const list = getDiariesByDate(date);
+    if (list.length) {
+      return updateDiary(list[0].id, {
+        content: String(content || ''),
+        mood: mood || '',
+        images: Array.isArray(images) ? images : (list[0].images || [])
+      });
+    }
+    return addDiary(date, content, mood, images);
   }
 
-  /** 日记图片：以 dataURL 存本地（不上传） */
-  function addDiaryImage(date, dataUrl) {
-    const rec = data.diaries[date] || { content: '', mood: '', images: [] };
+  /** 日记图片：以 dataURL 存本地（不上传），作用于指定 id */
+  function addDiaryImage(id, dataUrl) {
+    ensureMigrated();
+    const rec = data.diaryV2.find(x => x.id === id);
+    if (!rec) return;
     if (!Array.isArray(rec.images)) rec.images = [];
     rec.images.push(dataUrl);
     rec.updatedAt = Date.now();
-    data.diaries[date] = rec;
     save();
   }
 
-  function removeDiaryImage(date, index) {
-    const rec = data.diaries[date];
+  function removeDiaryImage(id, index) {
+    ensureMigrated();
+    const rec = data.diaryV2.find(x => x.id === id);
     if (!rec || !Array.isArray(rec.images)) return;
     rec.images.splice(index, 1);
     save();
   }
 
-  function deleteDiary(date) { delete data.diaries[date]; save(); }
+  function deleteDiary(id) {
+    ensureMigrated();
+    data.diaryV2 = data.diaryV2.filter(x => x.id !== id);
+    save();
+  }
+
+  /* ---- 日程 ---- */
+  function getSchedulesByDate(date) {
+    return data.schedule.filter(x => x.date === date)
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  }
+
+  function getAllSchedules() { return data.schedule.slice(); }
+
+  function addSchedule(date, time, title, note) {
+    const rec = {
+      id: uid(), date, time: time || '', title: String(title || '').trim(),
+      note: String(note || '').trim(), createdAt: Date.now()
+    };
+    if (!rec.title) return null;
+    data.schedule.push(rec); save();
+    return rec;
+  }
+
+  function updateSchedule(id, patch) {
+    const rec = data.schedule.find(x => x.id === id);
+    if (!rec) return null;
+    Object.assign(rec, patch); save();
+    return rec;
+  }
+
+  function deleteSchedule(id) {
+    data.schedule = data.schedule.filter(x => x.id !== id); save();
+  }
 
   /* ---- 记账 ---- */
   function getLedger() {
@@ -326,6 +439,9 @@ const Store = (() => {
     data = {
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
       diaries: parsed.diaries && typeof parsed.diaries === 'object' ? parsed.diaries : {},
+      diaryV2: Array.isArray(parsed.diaryV2) ? parsed.diaryV2 : [],
+      migratedV2: !!parsed.migratedV2,
+      schedule: Array.isArray(parsed.schedule) ? parsed.schedule : [],
       ledger: Array.isArray(parsed.ledger) ? parsed.ledger : [],
       habits: Array.isArray(parsed.habits) ? parsed.habits : [],
       vault: (parsed.vault && typeof parsed.vault === 'object')
@@ -351,6 +467,8 @@ const Store = (() => {
     getTasks, addTask, toggleTask, deleteTask, updateTask,
     nextRepeatDate, dueReminders, markReminded,
     getDiary, getAllDiaries, saveDiary, deleteDiary, addDiaryImage, removeDiaryImage,
+    getDiariesByDate, getDiaryById, addDiary, updateDiary, ensureMigrated,
+    getSchedulesByDate, getAllSchedules, addSchedule, updateSchedule, deleteSchedule,
     getLedger, addRecord, deleteRecord, ledgerStats,
     getHabits, addHabit, toggleHabit, deleteHabit, habitStreak,
     getSettings, setSetting, isModuleOn, toggleModule,

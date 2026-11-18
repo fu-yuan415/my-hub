@@ -1,7 +1,7 @@
 {
-  "versionCode": 18,
-  "versionName": "4.7",
+  "versionCode": 19,
+  "versionName": "5.0",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "密码本改用原生对话框输入密码，彻底解决键盘弹出消失问题",
+  "changelog": "日记支持一天多篇（旧数据自动迁移不丢失）；新增日历页含农历、节假日，点日期可设日程",
   "publishedAt": "2026-11-18"
 }

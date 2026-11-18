@@ -926,6 +926,56 @@ input:focus, textarea:focus { border-color: var(--primary); background: var(--su
   display: flex; align-items: center; justify-content: center;
 }
 
+/* ==================== 日历 ==================== */
+.cal-legend {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 4px 10px; font-size: 11.5px; color: var(--text-3);
+}
+.cal-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.cal-legend .link-btn { margin-left: auto; }
+.cal-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.cal-dot.diary { background: #e0648b; }
+.cal-dot.sched { background: #3a9ad9; }
+
+.cal-card { padding: 14px 10px; }
+.cal-week {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  text-align: center; font-size: 11px; color: var(--text-3);
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px; padding-top: 6px;
+}
+.cal-cell {
+  min-height: 52px; border-radius: 9px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1px; padding: 4px 1px; position: relative;
+  transition: background .15s;
+}
+.cal-cell.empty { pointer-events: none; }
+.cal-cell:not(.empty):active { background: var(--primary-weak); }
+.cal-cell.today .cal-num {
+  background: var(--primary); color: #fff;
+  border-radius: 50%; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-num { font-size: 14px; font-weight: 600; line-height: 24px; }
+.cal-lunar {
+  font-size: 9px; color: var(--text-3);
+  white-space: nowrap; overflow: hidden; max-width: 100%;
+  text-overflow: ellipsis;
+}
+.cal-lunar.fest { color: var(--danger); }
+.cal-marks { display: flex; gap: 3px; height: 7px; align-items: center; }
+
+.sched-row { gap: 10px; padding: 10px 12px; }
+.sched-time {
+  font-size: 11.5px; color: var(--primary); font-weight: 600;
+  background: var(--primary-weak); border-radius: 6px; padding: 2px 7px; flex-shrink: 0;
+}
+.sched-title { flex: 1; font-size: 13.5px; }
+
 /* 小屏微调 */
 @media (max-width: 360px) {
   .stat-card { padding: 12px 10px; }

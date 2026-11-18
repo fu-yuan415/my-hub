@@ -47,6 +47,7 @@
     diary: { name: '日记', icon: 'diary', color: '#e0648b' },
     ledger: { name: '记账', icon: 'ledger', color: '#22a06b' },
     habits: { name: '习惯', icon: 'habit', color: '#e08a2e' },
+    calendar: { name: '日历', icon: 'calendar', color: '#3a9ad9' },
     vault: { name: '密码本', icon: 'lock', color: '#7c5cd6' }
   };
   const MOODS = [
@@ -155,6 +156,7 @@
     { key: 'diary', name: '日记', icon: 'diary' },
     { key: 'ledger', name: '记账', icon: 'ledger' },
     { key: 'habits', name: '习惯', icon: 'habit' },
+    { key: 'calendar', name: '日历', icon: 'calendar' },
     { key: 'vault', name: '密码本', icon: 'lock' },
     { key: 'stats', name: '统计', icon: 'chart' },
     { key: 'settings', name: '设置', icon: 'settings' }
@@ -162,8 +164,8 @@
 
   /* 底部导航最多 5 项：固定「今日」开头、「设置」结尾，中间放已开启的模块（最多 3 个） */
   function navItems() {
-    const mid = ['tasks', 'diary', 'ledger', 'habits', 'vault']
-      .filter(k => Store.isModuleOn(k))
+    const mid = ['tasks', 'diary', 'ledger', 'habits', 'calendar', 'vault']
+      .filter(k => Store.isModuleOn(k) || k === 'calendar')
       .map(k => ({ key: k, name: MODULES[k].name, icon: MODULES[k].icon }));
 
     const items = [{ key: 'today', name: '今日', icon: 'home' }];
@@ -182,8 +184,8 @@
     const items = navItems();
     // 判断是否有未展示的模块
     const shown = new Set(items.map(i => i.key));
-    const hidden = ['tasks', 'diary', 'ledger', 'habits', 'vault']
-      .filter(k => Store.isModuleOn(k) && !shown.has(k));
+    const hidden = ['tasks', 'diary', 'ledger', 'habits', 'calendar', 'vault']
+      .filter(k => (Store.isModuleOn(k) || k === 'calendar') && !shown.has(k));
 
     nav.innerHTML = items.map(n => `
       <button class="nav-item ${currentPage === n.key ? 'active' : ''}" data-page="${n.key}">
@@ -237,14 +239,14 @@
     const titles = {
       today: s.nickname ? `${greetingShort()}，${s.nickname}` : greetingShort(),
       tasks: '任务', diary: '日记', ledger: '记账', habits: '习惯',
-      vault: '密码本', stats: '统计', settings: '设置'
+      calendar: '日历', vault: '密码本', stats: '统计', settings: '设置'
     };
     pageTitle.textContent = titles[currentPage] || greetingShort();
 
     const pages = {
       today: renderToday, tasks: renderTasks, diary: renderDiary,
-      ledger: renderLedger, habits: renderHabits, vault: renderVault,
-      stats: renderStats, settings: renderSettings
+      ledger: renderLedger, habits: renderHabits, calendar: renderCalendar,
+      vault: renderVault, stats: renderStats, settings: renderSettings
     };
     (pages[currentPage] || renderToday)();
 
@@ -524,15 +526,16 @@
   /* ---------- 日记 ---------- */
   function renderDiary() {
     const list = Store.getAllDiaries();
-    let html = `<button class="btn-primary block" id="newDiary">${ICON.edit}<span>写今天的日记</span></button>
-      <div class="section-label">历史记录 <span class="count">${list.length}</span></div>`;
+    const today = Store.todayKey();
+    let html = `<button class="btn-primary block" id="newDiary">${ICON.edit}<span>写一篇日记（今天）</span></button>
+      <div class="section-label">全部日记 <span class="count">${list.length}</span></div>`;
     if (!list.length) {
       html += emptyState('还没有日记，写下第一篇吧');
     } else {
       html += list.map(d => `
-        <div class="row-card diary-row" data-diary="${d.date}">
+        <div class="row-card diary-row" data-diaryid="${d.id}">
           <div class="diary-row-top">
-            <strong>${d.date.replace(/-/g, '/')}</strong>
+            <strong>${d.date.replace(/-/g, '/')}${d.date === today ? ' · 今天' : ''}</strong>
             ${d.mood ? `<span class="mood-tag">${d.mood}</span>` : ''}
             <span class="diary-time">${d.updatedAt ? new Date(d.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
           </div>
@@ -541,14 +544,17 @@
     }
     main.innerHTML = html;
 
-    $('#newDiary').addEventListener('click', () => openDiaryEditor(Store.todayKey()));
-    $$('[data-diary]').forEach(el => el.addEventListener('click', () => openDiaryEditor(el.dataset.diary)));
+    $('#newDiary').addEventListener('click', () => openDiaryEditor(null, today));
+    $$('[data-diaryid]').forEach(el =>
+      el.addEventListener('click', () => openDiaryEditor(el.dataset.diaryid)));
   }
 
-  function openDiaryEditor(date) {
-    const d = Store.getDiary(date) || { content: '', mood: '', images: [] };
-    const imgs = Array.isArray(d.images) ? d.images : [];
-    openModal(dayLabel(date), `
+  function openDiaryEditor(id, date) {
+    const existing = id ? Store.getDiaryById(id) : null;
+    const d = existing || { content: '', mood: '', images: [] };
+    const diaryDate = existing ? existing.date : (date || Store.todayKey());
+    let imgs = Array.isArray(d.images) ? d.images.slice() : [];
+    openModal(dayLabel(diaryDate), `
       <div class="mood-row">
         ${MOODS.map(m => `<button class="mood-item ${d.mood === m.e ? 'on' : ''}" data-mood="${m.e}">
           <span class="mood-emoji">${m.e}</span><span class="mood-text">${m.t}</span>
@@ -600,7 +606,8 @@
         if (!f.type.startsWith('image/')) continue;
         try {
           const dataUrl = await fileToCompressedDataUrl(f, 1000, 0.82);
-          Store.addDiaryImage(date, dataUrl);
+          imgs.push(dataUrl);
+          if (existing) Store.addDiaryImage(existing.id, dataUrl);
           const wrap = document.createElement('div');
           wrap.className = 'diary-img-wrap';
           const idx = ($('#diaryImages').children.length);
@@ -616,9 +623,9 @@
     function bindImgDel() {
       $$('[data-imgdel]').forEach(b => b.onclick = () => {
         const i = Number(b.dataset.imgdel);
-        Store.removeDiaryImage(date, i);
-        const cur = Store.getDiary(date);
-        $('#diaryImages').innerHTML = (cur.images || []).map((src, j) => `
+        imgs.splice(i, 1);
+        if (existing) Store.removeDiaryImage(existing.id, i);
+        $('#diaryImages').innerHTML = imgs.map((src, j) => `
           <div class="diary-img-wrap">
             <img src="${src}" alt="日记图片">
             <button class="img-del" data-imgdel="${j}">${ICON.close}</button>
@@ -631,15 +638,25 @@
 
     $('#saveDiary').addEventListener('click', () => {
       const html = editor.innerHTML.trim();
-      const cur = Store.getDiary(date) || { images: [] };
-      Store.saveDiary(date, html, mood, cur.images || []);
-      closeModal(); render(); toast('日记已保存');
+      if (existing) {
+        Store.updateDiary(existing.id, { content: html, mood, images: imgs });
+        toast('日记已更新');
+      } else {
+        const rec = Store.addDiary(diaryDate, html, mood, imgs);
+        // 新增日记的图片已在 addDiaryImage 时存过，若 imgs 有未存的补存
+        if (rec) imgs.forEach(src => {
+          if (!Store.getDiaryById(rec.id).images.includes(src)) Store.addDiaryImage(rec.id, src);
+        });
+        toast('日记已保存');
+      }
+      closeModal(); render();
     });
 
     const del = $('#delDiary');
     if (del) del.addEventListener('click', async () => {
       if (await uiConfirm('确定删除这篇日记吗？删除后无法恢复。', { danger: true, confirmText: '删除' })) {
-        Store.deleteDiary(date); closeModal(); render(); toast('已删除');
+        if (existing) Store.deleteDiary(existing.id);
+        closeModal(); render(); toast('已删除');
       }
     });
   }
@@ -665,6 +682,125 @@
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- 日历（含农历 + 日程） ---------- */
+  let calYear = new Date().getFullYear();
+  let calMonth = new Date().getMonth();   // 0-11
+
+  function renderCalendar() {
+    const first = new Date(calYear, calMonth, 1);
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const startDow = first.getDay();       // 0=周日
+    const today = Store.todayKey();
+
+    // 当月有日记/日程的日期集合
+    const diaryDates = new Set(Store.getAllDiaries().map(d => d.date));
+    const schedDates = new Set(Store.getAllSchedules().map(s => s.date));
+    const monthPrefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
+
+    let cells = '';
+    // 补齐开头空格
+    for (let i = 0; i < startDow; i++) cells += `<div class="cal-cell empty"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${monthPrefix}-${String(d).padStart(2, '0')}`;
+      const lunar = Lunar.solarToLunar(calYear, calMonth + 1, d);
+      const fest = Lunar.festival(calMonth + 1, d);
+      // 农历节日
+      let lText = lunar ? lunar.dayName : '';
+      if (lunar && lunar.lDay === 1) lText = lunar.monthName;
+      if (lunar && lunar.lMonth === 1 && lunar.lDay === 1) lText = '春节';
+      if (lunar && lunar.lMonth === 8 && lunar.lDay === 15) lText = '中秋';
+      if (lunar && lunar.lMonth === 5 && lunar.lDay === 5) lText = '端午';
+      const marks = [];
+      if (diaryDates.has(key)) marks.push('<i class="cal-dot diary"></i>');
+      if (schedDates.has(key)) marks.push('<i class="cal-dot sched"></i>');
+      const isToday = key === today;
+      cells += `<button class="cal-cell ${isToday ? 'today' : ''}" data-date="${key}">
+        <span class="cal-num">${d}</span>
+        <span class="cal-lunar ${fest ? 'fest' : ''}">${esc(fest || lText)}</span>
+        <span class="cal-marks">${marks.join('')}</span>
+      </button>`;
+    }
+
+    main.innerHTML = `
+      <div class="month-bar">
+        <button class="icon-btn" id="calPrev" aria-label="上月">${ICON.chevronLeft}</button>
+        <label class="month-display"><span>${calYear}年${calMonth + 1}月</span>
+          <input type="month" id="calMonthInput" value="${monthPrefix}"></label>
+        <button class="icon-btn" id="calNext" aria-label="下月">${ICON.chevronRight}</button>
+      </div>
+      <div class="cal-legend">
+        <span><i class="cal-dot diary"></i> 有日记</span>
+        <span><i class="cal-dot sched"></i> 有日程</span>
+        <button class="link-btn" id="calToday">回今天</button>
+      </div>
+      <section class="card cal-card">
+        <div class="cal-week">
+          ${['日','一','二','三','四','五','六'].map(w => `<span>${w}</span>`).join('')}
+        </div>
+        <div class="cal-grid">${cells}</div>
+      </section>`;
+
+    $('#calPrev').addEventListener('click', () => { shiftCal(-1); renderCalendar(); });
+    $('#calNext').addEventListener('click', () => { shiftCal(1); renderCalendar(); });
+    $('#calMonthInput').addEventListener('change', e => {
+      if (!e.target.value) return;
+      const [y, m] = e.target.value.split('-').map(Number);
+      calYear = y; calMonth = m - 1; renderCalendar();
+    });
+    $('#calToday').addEventListener('click', () => {
+      const n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); renderCalendar();
+    });
+    $$('[data-date]').forEach(el => el.addEventListener('click', () => openDayPanel(el.dataset.date)));
+  }
+
+  function shiftCal(delta) {
+    const d = new Date(calYear, calMonth + delta, 1);
+    calYear = d.getFullYear(); calMonth = d.getMonth();
+  }
+
+  /** 点某天：显示日程列表 + 添加日程 + 跳写日记 */
+  function openDayPanel(date) {
+    const lunar = Lunar.solarToLunar(+date.slice(0,4), +date.slice(5,7), +date.slice(8,10));
+    const schedules = Store.getSchedulesByDate(date);
+    const diaries = Store.getDiariesByDate(date);
+    openModal(dayLabel(date), `
+      <p class="hint block-hint">${lunar ? lunar.monthName + lunar.dayName : ''}${Lunar.festival(+date.slice(5,7), +date.slice(8,10)) ? ' · ' + Lunar.festival(+date.slice(5,7), +date.slice(8,10)) : ''}</p>
+      <div class="form-label">当日日程 (${schedules.length})</div>
+      <div id="schedList">
+        ${schedules.length ? schedules.map(s => `
+          <div class="row-card sched-row">
+            <span class="sched-time">${esc(s.time || '全天')}</span>
+            <span class="sched-title">${esc(s.title)}</span>
+            <button class="icon-btn del" data-delsched="${s.id}">${ICON.close}</button>
+          </div>`).join('') : '<div class="empty">暂无日程</div>'}
+      </div>
+      <div class="form-label">新日程</div>
+      <div class="add-bar">
+        <input type="time" id="schedTime" style="width:110px;flex-shrink:0">
+        <input type="text" id="schedTitle" placeholder="日程内容">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="addDiaryThisDay">写日记</button>
+        <button class="btn-primary" id="addSched">添加日程</button>
+      </div>`);
+
+    $('#addSched').addEventListener('click', () => {
+      const title = $('#schedTitle').value.trim();
+      if (!title) return toast('请输入日程内容');
+      Store.addSchedule(date, $('#schedTime').value, title, '');
+      toast('日程已添加'); closeModal(); openDayPanel(date);
+    });
+    $$('[data-delsched]').forEach(b => b.addEventListener('click', async () => {
+      if (await uiConfirm('删除这条日程？', { danger: true, confirmText: '删除' })) {
+        Store.deleteSchedule(b.dataset.delsched);
+        closeModal(); openDayPanel(date); toast('已删除');
+      }
+    }));
+    $('#addDiaryThisDay').addEventListener('click', () => {
+      closeModal(); openDiaryEditor(null, date);
     });
   }
 
@@ -1046,7 +1182,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '4.7';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '5.0';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1822,7 +1958,7 @@
     if (diaries.length) {
       html += `<div class="search-group">日记 (${diaries.length})</div>`;
       html += diaries.slice(0, 8).map(d => `
-        <div class="row-card search-item" data-diary="${d.date}">
+        <div class="row-card search-item" data-diaryid="${d.id}">
           <span class="search-tag diary">日记</span>
           <span class="search-text">${d.date} · ${esc(htmlToText(d.content).slice(0, 50))}</span>
         </div>`).join('');
@@ -1839,8 +1975,8 @@
     box.querySelectorAll('[data-go]').forEach(el => el.addEventListener('click', () => {
       closeModal(); go(el.dataset.go);
     }));
-    box.querySelectorAll('[data-diary]').forEach(el => el.addEventListener('click', () => {
-      closeModal(); openDiaryEditor(el.dataset.diary);
+    box.querySelectorAll('[data-diaryid]').forEach(el => el.addEventListener('click', () => {
+      closeModal(); openDiaryEditor(el.dataset.diaryid);
     }));
   }
 
@@ -1893,7 +2029,8 @@
   if (typeof window !== 'undefined' && window.__DSH_TEST__) {
     window.__hooks = {
       go, renderToday, renderTasks, renderDiary, renderLedger,
-      renderHabits, renderVault, renderStats, renderSettings, renderNav
+      renderHabits, renderCalendar, openDayPanel, renderVault,
+      renderStats, renderSettings, renderNav
     };
   }
 })();
