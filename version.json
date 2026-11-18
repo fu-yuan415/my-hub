@@ -1,7 +1,7 @@
 {
-  "versionCode": 9,
-  "versionName": "3.1",
+  "versionCode": 10,
+  "versionName": "3.2",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "使用正确的初音图标；新增动态图标别名，更新后自动刷新桌面图标",
+  "changelog": "修复打开后立即退回桌面的问题；保留正确的初音图标",
   "publishedAt": "2026-11-18"
 }
