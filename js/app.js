@@ -1024,7 +1024,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '2.5';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '3.1';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1153,7 +1153,10 @@
     async function checkUpdate(silent) {
       if (checkBtn) { checkBtn.disabled = true; checkBtn.textContent = '检查中…'; }
       try {
-        const url = './version.json?t=' + Date.now();
+        // 本地版从固定网址检查；网页版从同目录检查
+        const url = location.protocol === 'file:'
+          ? 'https://fu-yuan415.github.io/my-hub/version.json?t=' + Date.now()
+          : './version.json?t=' + Date.now();
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         remoteInfo = await res.json();
@@ -1740,7 +1743,8 @@
   checkReminders();
 
   /* ---------- 启动 ---------- */
-  if ('serviceWorker' in navigator) {
+  // 本地版：file:// 下 Service Worker 不工作，也不必要
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
   renderNav();

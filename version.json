@@ -1,7 +1,7 @@
 {
-  "versionCode": 8,
-  "versionName": "3.0",
+  "versionCode": 9,
+  "versionName": "3.1",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "完全离线版：网页打包进APP，断网也能用；修复缓存与图标问题",
+  "changelog": "使用正确的初音图标；新增动态图标别名，更新后自动刷新桌面图标",
   "publishedAt": "2026-11-18"
 }
