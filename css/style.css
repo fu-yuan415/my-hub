@@ -611,6 +611,15 @@ input:focus, textarea:focus { border-color: var(--primary); background: var(--su
 .topbar-btn svg { width: 17px; height: 17px; }
 .topbar-btn:active { background: var(--primary-weak); color: var(--primary); }
 
+/* 密码输入：用 text-security 显示圆点，规避 WebView 对 password 类型
+   与密码管理器自动填充冲突导致输入框点不动的问题 */
+input.pwd-mask {
+  -webkit-text-security: disc;
+  text-security: disc;
+  ime-mode: password;
+  autocomplete: off;
+}
+
 /* ==================== 密码本 ==================== */
 .vault-hero { text-align: center; padding: 30px 22px; }
 .vault-badge {

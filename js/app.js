@@ -1046,7 +1046,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '4.5';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '4.6';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1306,11 +1306,30 @@
         <h3>设置密码本主密码</h3>
         <p class="hint block-hint">密码本里的内容会用这个密码加密后保存在本机，不上传。密码只在你脑中，忘记将无法恢复内容，请牢记。</p>
         <div class="field"><label>设置密码（至少 4 位）</label>
-          <input type="password" id="vp1" placeholder="输入主密码" autocomplete="new-password"></div>
+          <input type="text" class="pwd-mask" id="vp1" placeholder="输入主密码"
+                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 style="-webkit-user-select:text;user-select:text;caret-color:var(--primary)"></div>
         <div class="field"><label>再输一次</label>
-          <input type="password" id="vp2" placeholder="确认主密码" autocomplete="new-password"></div>
+          <input type="text" class="pwd-mask" id="vp2" placeholder="确认主密码"
+                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 style="-webkit-user-select:text;user-select:text;caret-color:var(--primary)"></div>
         <button class="btn-primary block" id="vSetup">创建密码本</button>
       </section>`;
+    // 主动聚焦 + 点击聚焦，兼容 WebView 输入框不弹键盘的问题
+    const nb = native();
+    ['#vp1', '#vp2'].forEach(sel => {
+      const el = $(sel);
+      if (!el) return;
+      const focusIt = () => {
+        try { el.focus(); } catch (e) { }
+        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
+      };
+      el.addEventListener('click', focusIt);
+      el.addEventListener('touchstart', focusIt, { passive: true });
+      el.addEventListener('focus', () => {
+        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
+      });
+    });
     $('#vSetup').addEventListener('click', async () => {
       const p1 = $('#vp1').value, p2 = $('#vp2').value;
       if (p1.length < 4) return toast('密码至少 4 位');
@@ -1330,9 +1349,24 @@
         <h3>密码本已锁定</h3>
         <p class="hint block-hint">输入主密码查看内容。离开页面后会自动重新锁定。</p>
         <div class="field"><label>主密码</label>
-          <input type="password" id="vpUnlock" placeholder="输入密码" autocomplete="current-password"></div>
+          <input type="text" class="pwd-mask" id="vpUnlock" placeholder="输入密码"
+                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 style="-webkit-user-select:text;user-select:text;caret-color:var(--primary)"></div>
         <button class="btn-primary block" id="vUnlock">解锁</button>
       </section>`;
+    const ue = $('#vpUnlock');
+    if (ue) {
+      const nb = native();
+      const focusIt = () => {
+        try { ue.focus(); } catch (e) { }
+        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
+      };
+      ue.addEventListener('click', focusIt);
+      ue.addEventListener('touchstart', focusIt, { passive: true });
+      ue.addEventListener('focus', () => {
+        if (nb && typeof nb.showKeyboard === 'function') nb.showKeyboard();
+      });
+    }
     const doUnlock = async () => {
       try {
         await Vault.unlock($('#vpUnlock').value);

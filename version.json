@@ -1,7 +1,7 @@
 {
-  "versionCode": 16,
-  "versionName": "4.5",
+  "versionCode": 17,
+  "versionName": "4.6",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "修复更新下载失败/卡0%：改用系统下载服务，支持后台和断点续传",
+  "changelog": "修复密码本输入框无法输入：改用兼容输入模式并主动弹出键盘",
   "publishedAt": "2026-11-18"
 }
