@@ -66,6 +66,13 @@
     return String(s).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+  /** 把富文本 HTML 转成纯文本预览 */
+  function htmlToText(html) {
+    if (!html) return '';
+    const div = document.createElement('div');
+    div.innerHTML = String(html);
+    return (div.textContent || '').replace(/\s+/g, ' ').trim();
+  }
   function fmtMoney(n) {
     return '¥' + Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
@@ -375,6 +382,22 @@
           <option value="high">重要</option>
           <option value="low">次要</option>
         </select>
+        <button class="icon-btn add-opt" id="taskMore" title="更多选项">${ICON.repeat}</button>
+      </div>
+      <div id="taskMorePanel" class="more-panel hidden">
+        <div class="more-opt-row">
+          <label>重复</label>
+          <select id="taskRepeat">
+            <option value="none">不重复</option>
+            <option value="daily">每天</option>
+            <option value="weekly">每周</option>
+            <option value="monthly">每月</option>
+          </select>
+        </div>
+        <div class="more-opt-row">
+          <label>提醒</label>
+          <input type="time" id="taskRemind">
+        </div>
       </div>
       <div class="section-label">待办 <span class="count">${pending.length}</span></div>`;
     html += pending.length ? pending.map(t => taskRow(t)).join('') : emptyState('暂无待办，享受清闲');
@@ -388,11 +411,28 @@
     $('#taskInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         const v = e.target.value.trim();
-        if (v) { Store.addTask(v, $('#taskPriority').value, today); render(); toast('已添加'); }
+        if (v) {
+          Store.addTask(v, $('#taskPriority').value, today, {
+            repeat: $('#taskRepeat') ? $('#taskRepeat').value : 'none',
+            remindAt: $('#taskRemind') ? $('#taskRemind').value : ''
+          });
+          render(); toast('已添加');
+        }
       }
+    });
+    const moreBtn = $('#taskMore');
+    if (moreBtn) moreBtn.addEventListener('click', () => {
+      const p = $('#taskMorePanel');
+      p.classList.toggle('hidden');
+      moreBtn.classList.toggle('on');
     });
     $$('[data-toggle-task]').forEach(el => el.addEventListener('click', () => {
       Store.toggleTask(el.dataset.toggleTask); render();
+    }));
+    $$('[data-edit-task]').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      const t = Store.getTasks().find(x => x.id === el.dataset.editTask);
+      if (t) openTaskEditor(t);
     }));
     $$('[data-del-task]').forEach(el => el.addEventListener('click', async e => {
       e.stopPropagation();
@@ -411,14 +451,65 @@
   function taskRow(t) {
     const badge = t.priority === 'high' ? '<span class="prio high">重要</span>'
       : t.priority === 'low' ? '<span class="prio low">次要</span>' : '';
+    const repeatLabel = { daily: '每天', weekly: '每周', monthly: '每月' }[t.repeat] || '';
+    const meta = [];
+    if (repeatLabel) meta.push(`<span class="task-meta">${ICON.repeat}${repeatLabel}</span>`);
+    if (t.remindAt) meta.push(`<span class="task-meta">⏰${t.remindAt}</span>`);
     return `<div class="row-card task-row ${t.done ? 'done' : ''}">
       <button class="check ${t.done ? 'on' : ''}" data-toggle-task="${t.id}" aria-label="完成">
         ${t.done ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4.5 4.5L19 7"/></svg>' : ''}
       </button>
-      <span class="task-text">${esc(t.text)}</span>
+      <div class="task-main">
+        <span class="task-text">${esc(t.text)}</span>
+        ${meta.length ? `<div class="task-metas">${meta.join('')}</div>` : ''}
+      </div>
       ${badge}
+      <button class="icon-btn" data-edit-task="${t.id}" aria-label="设置">${ICON.settings}</button>
       <button class="icon-btn del" data-del-task="${t.id}" aria-label="删除">${ICON.close}</button>
     </div>`;
+  }
+
+  /** 任务编辑：改重复、提醒、优先级、日期 */
+  function openTaskEditor(t) {
+    openModal('任务设置', `
+      <div class="form-label">内容</div>
+      <input type="text" id="teText" value="${esc(t.text)}">
+      <div class="form-label">优先级</div>
+      <div class="seg-switch wide">
+        <button class="seg ${t.priority === 'high' ? 'on' : ''}" data-tep="high">重要</button>
+        <button class="seg ${t.priority === 'mid' ? 'on' : ''}" data-tep="mid">普通</button>
+        <button class="seg ${t.priority === 'low' ? 'on' : ''}" data-tep="low">次要</button>
+      </div>
+      <div class="form-label">日期</div>
+      <input type="date" id="teDate" value="${t.date}">
+      <div class="form-label">重复</div>
+      <select id="teRepeat">
+        <option value="none" ${t.repeat === 'none' ? 'selected' : ''}>不重复</option>
+        <option value="daily" ${t.repeat === 'daily' ? 'selected' : ''}>每天</option>
+        <option value="weekly" ${t.repeat === 'weekly' ? 'selected' : ''}>每周</option>
+        <option value="monthly" ${t.repeat === 'monthly' ? 'selected' : ''}>每月</option>
+      </select>
+      <div class="form-label">提醒时间（可选）</div>
+      <input type="time" id="teRemind" value="${t.remindAt || ''}">
+      <p class="hint block-hint">重复任务完成后会自动生成下一次。提醒需 App 处于打开状态才会触发。</p>
+      <div class="modal-actions"><button class="btn-primary block" id="teSave">保存</button></div>`);
+    let priority = t.priority;
+    $$('[data-tep]').forEach(b => b.addEventListener('click', () => {
+      priority = b.dataset.tep;
+      $$('[data-tep]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    }));
+    $('#teSave').addEventListener('click', () => {
+      const text = $('#teText').value.trim();
+      if (!text) return toast('内容不能为空');
+      Store.updateTask(t.id, {
+        text, priority,
+        date: $('#teDate').value,
+        repeat: $('#teRepeat').value,
+        remindAt: $('#teRemind').value
+      });
+      closeModal(); render(); toast('已保存');
+    });
   }
 
   /* ---------- 日记 ---------- */
@@ -436,7 +527,7 @@
             ${d.mood ? `<span class="mood-tag">${d.mood}</span>` : ''}
             <span class="diary-time">${d.updatedAt ? new Date(d.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
           </div>
-          <div class="diary-row-text">${esc((d.content || '').slice(0, 90) || '（空白）')}${(d.content || '').length > 90 ? '…' : ''}</div>
+          <div class="diary-row-text">${esc(htmlToText(d.content).slice(0, 90) || '（空白）')}${htmlToText(d.content).length > 90 ? '…' : ''}${(d.images && d.images.length) ? ` <span class="img-count">🖼 ${d.images.length}</span>` : ''}</div>
         </div>`).join('');
     }
     main.innerHTML = html;
@@ -446,33 +537,125 @@
   }
 
   function openDiaryEditor(date) {
-    const d = Store.getDiary(date) || { content: '', mood: '' };
+    const d = Store.getDiary(date) || { content: '', mood: '', images: [] };
+    const imgs = Array.isArray(d.images) ? d.images : [];
     openModal(dayLabel(date), `
       <div class="mood-row">
         ${MOODS.map(m => `<button class="mood-item ${d.mood === m.e ? 'on' : ''}" data-mood="${m.e}">
           <span class="mood-emoji">${m.e}</span><span class="mood-text">${m.t}</span>
         </button>`).join('')}
       </div>
-      <textarea id="diaryText" class="diary-area" placeholder="今天发生了什么？想记下些什么…">${esc(d.content)}</textarea>
+      <div class="rt-toolbar">
+        <button class="rt-btn" data-rt="bold" title="加粗"><b>B</b></button>
+        <button class="rt-btn" data-rt="italic" title="斜体"><i>I</i></button>
+        <button class="rt-btn" data-rt="underline" title="下划线"><u>U</u></button>
+        <button class="rt-btn" data-rt="insertUnorderedList" title="列表">• —</button>
+        <button class="rt-btn" data-rt="img" title="插入图片">${ICON.image}</button>
+      </div>
+      <div id="diaryEditor" class="diary-area rt-editor" contenteditable="true"
+           data-placeholder="今天发生了什么？想记下些什么…">${d.content || ''}</div>
+      <div id="diaryImages" class="diary-images">
+        ${imgs.map((src, i) => `
+          <div class="diary-img-wrap">
+            <img src="${src}" alt="日记图片">
+            <button class="img-del" data-imgdel="${i}">${ICON.close}</button>
+          </div>`).join('')}
+      </div>
+      <input type="file" id="diaryImgInput" accept="image/*" multiple hidden>
       <div class="modal-actions">
-        ${d.content ? `<button class="btn-ghost danger" id="delDiary">删除</button>` : ''}
+        ${(d.content || imgs.length) ? `<button class="btn-ghost danger" id="delDiary">删除</button>` : ''}
         <button class="btn-primary" id="saveDiary">保存</button>
       </div>`);
+
     let mood = d.mood;
     $$('.mood-item').forEach(b => b.addEventListener('click', () => {
       mood = b.dataset.mood;
       $$('.mood-item').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
     }));
+
+    const editor = $('#diaryEditor');
+    // 富文本工具栏
+    $$('.rt-btn').forEach(btn => btn.addEventListener('click', e => {
+      e.preventDefault();
+      const cmd = btn.dataset.rt;
+      if (cmd === 'img') { $('#diaryImgInput').click(); return; }
+      editor.focus();
+      document.execCommand(cmd, false, null);
+    }));
+
+    // 插入图片（压缩后转 dataURL 存本地）
+    $('#diaryImgInput').addEventListener('change', async e => {
+      const files = Array.from(e.target.files || []);
+      for (const f of files) {
+        if (!f.type.startsWith('image/')) continue;
+        try {
+          const dataUrl = await fileToCompressedDataUrl(f, 1000, 0.82);
+          Store.addDiaryImage(date, dataUrl);
+          const wrap = document.createElement('div');
+          wrap.className = 'diary-img-wrap';
+          const idx = ($('#diaryImages').children.length);
+          wrap.innerHTML = `<img src="${dataUrl}" alt="日记图片"><button class="img-del" data-imgdel="${idx}">${ICON.close}</button>`;
+          $('#diaryImages').appendChild(wrap);
+          bindImgDel();
+          toast('图片已添加');
+        } catch (err) { toast('图片处理失败'); }
+      }
+      e.target.value = '';
+    });
+
+    function bindImgDel() {
+      $$('[data-imgdel]').forEach(b => b.onclick = () => {
+        const i = Number(b.dataset.imgdel);
+        Store.removeDiaryImage(date, i);
+        const cur = Store.getDiary(date);
+        $('#diaryImages').innerHTML = (cur.images || []).map((src, j) => `
+          <div class="diary-img-wrap">
+            <img src="${src}" alt="日记图片">
+            <button class="img-del" data-imgdel="${j}">${ICON.close}</button>
+          </div>`).join('');
+        bindImgDel();
+        toast('图片已删除');
+      });
+    }
+    bindImgDel();
+
     $('#saveDiary').addEventListener('click', () => {
-      Store.saveDiary(date, $('#diaryText').value, mood);
+      const html = editor.innerHTML.trim();
+      const cur = Store.getDiary(date) || { images: [] };
+      Store.saveDiary(date, html, mood, cur.images || []);
       closeModal(); render(); toast('日记已保存');
     });
+
     const del = $('#delDiary');
     if (del) del.addEventListener('click', async () => {
       if (await uiConfirm('确定删除这篇日记吗？删除后无法恢复。', { danger: true, confirmText: '删除' })) {
         Store.deleteDiary(date); closeModal(); render(); toast('已删除');
       }
+    });
+  }
+
+  /** 图片压缩为 dataURL，控制存储体积 */
+  function fileToCompressedDataUrl(file, maxSize = 1000, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width: w, height: h } = img;
+          const scale = Math.min(1, maxSize / Math.max(w, h));
+          w = Math.round(w * scale); h = Math.round(h * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
   }
 
@@ -1238,7 +1421,7 @@
     if (!q) { box.innerHTML = emptyState('输入关键词开始搜索'); return; }
 
     const tasks = Store.getTasks().filter(t => t.text.toLowerCase().includes(q));
-    const diaries = Store.getAllDiaries().filter(d => (d.content || '').toLowerCase().includes(q));
+    const diaries = Store.getAllDiaries().filter(d => htmlToText(d.content).toLowerCase().includes(q));
     const ledger = Store.getLedger().filter(r =>
       (r.note || '').toLowerCase().includes(q) ||
       (r.category || '').toLowerCase().includes(q));
@@ -1260,7 +1443,7 @@
       html += diaries.slice(0, 8).map(d => `
         <div class="row-card search-item" data-diary="${d.date}">
           <span class="search-tag diary">日记</span>
-          <span class="search-text">${d.date} · ${esc((d.content || '').slice(0, 50))}</span>
+          <span class="search-text">${d.date} · ${esc(htmlToText(d.content).slice(0, 50))}</span>
         </div>`).join('');
     }
     if (ledger.length) {
@@ -1295,6 +1478,30 @@
   $('#modalClose').addEventListener('click', closeModal);
   const searchBtn = $('#searchBtn');
   if (searchBtn) searchBtn.addEventListener('click', openSearch);
+
+  /* ---------- 任务提醒 ---------- */
+  function checkReminders() {
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        Store.dueReminders().forEach(t => {
+          try {
+            new Notification('任务提醒', { body: t.text, tag: t.id });
+          } catch (e) { /* 忽略 */ }
+          Store.markReminded(t.id);
+          toast(`提醒：${t.text}`);
+        });
+      } else {
+        // 没有通知权限时用页内提示
+        const due = Store.dueReminders();
+        due.forEach(t => {
+          toast(`提醒：${t.text}`);
+          Store.markReminded(t.id);
+        });
+      }
+    } catch (e) { /* 忽略 */ }
+  }
+  setInterval(checkReminders, 30000);
+  checkReminders();
 
   /* ---------- 启动 ---------- */
   if ('serviceWorker' in navigator) {

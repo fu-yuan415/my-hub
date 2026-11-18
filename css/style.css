@@ -775,6 +775,72 @@ input:focus, textarea:focus { border-color: var(--primary); background: var(--su
 }
 .more-item:active { background: var(--primary-weak); }
 
+/* ==================== 富文本日记 ==================== */
+.rt-toolbar {
+  display: flex; gap: 6px; margin-bottom: 10px;
+  padding: 7px; background: var(--surface-2); border-radius: var(--r-sm);
+}
+.rt-btn {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-2); font-size: 14px; transition: all .15s;
+}
+.rt-btn svg { width: 17px; height: 17px; }
+.rt-btn:active { background: var(--primary-weak); color: var(--primary); }
+
+.rt-editor {
+  min-height: 180px; max-height: 40vh; overflow-y: auto;
+  background: var(--surface-2); border-radius: var(--r-sm);
+  padding: 13px 14px; line-height: 1.75; font-size: 14.5px;
+  outline: none; -webkit-overflow-scrolling: touch;
+}
+.rt-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-3); pointer-events: none;
+}
+.rt-editor:focus { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--primary); }
+.rt-editor ul { margin: 8px 0; padding-left: 22px; }
+.rt-editor img { max-width: 100%; border-radius: 10px; margin: 8px 0; }
+
+.diary-images {
+  display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px;
+}
+.diary-img-wrap {
+  position: relative; width: 84px; height: 84px;
+  border-radius: 10px; overflow: hidden; background: var(--surface-2);
+}
+.diary-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.img-del {
+  position: absolute; top: 3px; right: 3px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(0, 0, 0, .6); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.img-del svg { width: 11px; height: 11px; }
+.img-count { font-size: 11px; color: var(--text-3); }
+
+/* ==================== 任务扩展 ==================== */
+.add-opt { width: 40px; height: 44px; flex-shrink: 0; background: var(--surface-2); border-radius: var(--r-sm); }
+.add-opt.on { background: var(--primary-weak); color: var(--primary); }
+.more-panel {
+  background: var(--surface); border-radius: var(--r-sm);
+  padding: 14px; margin-bottom: 4px; box-shadow: var(--shadow-sm);
+  animation: sheet-up .18s ease;
+}
+.more-panel.hidden { display: none; }
+.more-opt-row { display: flex; align-items: center; gap: 12px; }
+.more-opt-row + .more-opt-row { margin-top: 11px; }
+.more-opt-row label { font-size: 12.5px; color: var(--text-3); width: 36px; flex-shrink: 0; }
+.more-opt-row select, .more-opt-row input { flex: 1; padding: 9px 12px; font-size: 13.5px; }
+
+.task-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.task-metas { display: flex; gap: 8px; flex-wrap: wrap; }
+.task-meta {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10.5px; color: var(--text-3);
+}
+.task-meta svg { width: 11px; height: 11px; }
+
 /* 小屏微调 */
 @media (max-width: 360px) {
   .stat-card { padding: 12px 10px; }

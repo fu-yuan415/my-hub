@@ -73,10 +73,13 @@ const Store = (() => {
     });
   }
 
-  function addTask(text, priority = 'mid', date = todayKey()) {
+  function addTask(text, priority = 'mid', date = todayKey(), opts = {}) {
     const task = {
       id: uid(), text: String(text || '').trim(), priority, date,
-      done: false, createdAt: Date.now()
+      done: false, createdAt: Date.now(),
+      repeat: opts.repeat || 'none',      // none | daily | weekly | monthly
+      remindAt: opts.remindAt || '',      // 'HH:MM' 或 ''
+      reminded: false
     };
     if (!task.text) return null;
     data.tasks.push(task); save();
@@ -85,8 +88,67 @@ const Store = (() => {
 
   function toggleTask(id) {
     const t = data.tasks.find(x => x.id === id);
-    if (t) { t.done = !t.done; save(); }
+    if (!t) return null;
+    t.done = !t.done;
+    // 完成重复任务时，自动生成下一次
+    if (t.done && t.repeat && t.repeat !== 'none') {
+      const next = nextRepeatDate(t.date, t.repeat);
+      if (next && next !== t.date) {
+        const exists = data.tasks.some(x => x.text === t.text && x.date === next);
+        if (!exists) {
+          data.tasks.push({
+            id: uid(), text: t.text, priority: t.priority, date: next,
+            done: false, createdAt: Date.now(),
+            repeat: t.repeat, remindAt: t.remindAt, reminded: false
+          });
+        }
+      }
+    }
+    save();
     return t;
+  }
+
+  /** 计算下一次重复日期 */
+  function nextRepeatDate(dateKey, repeat) {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    if (repeat === 'daily') dt.setDate(dt.getDate() + 1);
+    else if (repeat === 'weekly') dt.setDate(dt.getDate() + 7);
+    else if (repeat === 'monthly') dt.setMonth(dt.getMonth() + 1);
+    else return '';
+    return dateKeyOf(dt);
+  }
+
+  function dateKeyOf(d) {
+    const y = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${mm}-${dd}`;
+  }
+
+  /** 更新任务（用于编辑提醒/重复等） */
+  function updateTask(id, patch) {
+    const t = data.tasks.find(x => x.id === id);
+    if (!t) return null;
+    Object.assign(t, patch);
+    if (patch.remindAt !== undefined) t.reminded = false;
+    save();
+    return t;
+  }
+
+  /** 取出当前时刻应提醒、且尚未提醒过的任务 */
+  function dueReminders(now = new Date()) {
+    const today = todayKey(now);
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return data.tasks.filter(t =>
+      !t.done && t.date === today && t.remindAt &&
+      t.remindAt === hhmm && !t.reminded
+    );
+  }
+
+  function markReminded(id) {
+    const t = data.tasks.find(x => x.id === id);
+    if (t) { t.reminded = true; save(); }
   }
 
   function deleteTask(id) {
@@ -101,10 +163,30 @@ const Store = (() => {
       .map(k => ({ date: k, ...data.diaries[k] }));
   }
 
-  function saveDiary(date, content, mood) {
+  function saveDiary(date, content, mood, images) {
     data.diaries[date] = {
-      content: String(content || ''), mood: mood || '', updatedAt: Date.now()
+      content: String(content || ''),
+      mood: mood || '',
+      images: Array.isArray(images) ? images : (data.diaries[date]?.images || []),
+      updatedAt: Date.now()
     };
+    save();
+  }
+
+  /** 日记图片：以 dataURL 存本地（不上传） */
+  function addDiaryImage(date, dataUrl) {
+    const rec = data.diaries[date] || { content: '', mood: '', images: [] };
+    if (!Array.isArray(rec.images)) rec.images = [];
+    rec.images.push(dataUrl);
+    rec.updatedAt = Date.now();
+    data.diaries[date] = rec;
+    save();
+  }
+
+  function removeDiaryImage(date, index) {
+    const rec = data.diaries[date];
+    if (!rec || !Array.isArray(rec.images)) return;
+    rec.images.splice(index, 1);
     save();
   }
 
@@ -266,8 +348,9 @@ const Store = (() => {
 
   return {
     todayKey, dateKey, uid,
-    getTasks, addTask, toggleTask, deleteTask,
-    getDiary, getAllDiaries, saveDiary, deleteDiary,
+    getTasks, addTask, toggleTask, deleteTask, updateTask,
+    nextRepeatDate, dueReminders, markReminded,
+    getDiary, getAllDiaries, saveDiary, deleteDiary, addDiaryImage, removeDiaryImage,
     getLedger, addRecord, deleteRecord, ledgerStats,
     getHabits, addHabit, toggleHabit, deleteHabit, habitStreak,
     getSettings, setSetting, isModuleOn, toggleModule,
