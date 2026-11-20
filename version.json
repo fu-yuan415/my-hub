@@ -1,7 +1,7 @@
 {
-  "versionCode": 24,
-  "versionName": "5.5",
+  "versionCode": 25,
+  "versionName": "5.6",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "测试版：验证软件内更新链路",
+  "changelog": "安全加固：应用内网络出口限制为仅更新检查所需域名，关闭 WebView 万能跨域访问，签名密码移出源码；修复发布脚本未同步 APK 内嵌网页的问题",
   "publishedAt": "2026-11-20"
 }

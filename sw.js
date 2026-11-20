@@ -1,7 +1,7 @@
 /* Service Worker：网络优先，确保总是拿到最新代码。
  * 只有完全离线时才用缓存兜底。
  */
-const CACHE = 'personal-hub-v7';
+const CACHE = 'personal-hub-v25';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
