@@ -1211,7 +1211,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '5.1';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '5.2';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {

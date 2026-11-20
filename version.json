@@ -1,7 +1,7 @@
 {
-  "versionCode": 20,
-  "versionName": "5.1",
+  "versionCode": 21,
+  "versionName": "5.2",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "修复更新后退回桌面且版本不变：改为下载完成后手动点安装",
+  "changelog": "测试新版更新流程：下载进度显示，完成后手动点安装",
   "publishedAt": "2026-11-20"
 }
