@@ -1023,9 +1023,18 @@
   }
 
   /* ---------- 设置 ---------- */
-  function renderDownloadBoxHTML() {
+  /** 下载记录是否有效（版本高于当前版本） */
+  function downloadIsValid() {
     const d = UpdateState.download;
-    if (!d || d.state === 'idle') return '';
+    if (!d || d.state === 'idle') return false;
+    const dCode = Number(d.code) || 0;
+    if (dCode && dCode <= getCurrentVersion().code) return false;
+    return true;
+  }
+
+  function renderDownloadBoxHTML() {
+    if (!downloadIsValid()) return '';
+    const d = UpdateState.download;
     if (d.state === 'downloading') return `
       <div class="download-box">
         <div class="download-head"><span>正在下载 ${esc(d.version || '')}</span><strong>${d.progress}%</strong></div>
@@ -1211,7 +1220,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '5.3';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '5.4';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1370,9 +1379,9 @@
       ${renderDownloadBoxHTML()}
       <div class="btn-row">
         <button class="btn-ghost" id="checkUpdateBtn">${UpdateState.checking ? '检查中…' : '检查更新'}</button>
-        ${UpdateState.hasUpdate && (!UpdateState.download || ['idle','failed'].includes(UpdateState.download.state))
+        ${UpdateState.hasUpdate && (!downloadIsValid() || UpdateState.download.state === 'failed')
           ? `<button class="btn-primary" id="doUpdateBtn">立即更新</button>` : ''}
-        ${UpdateState.download && UpdateState.download.state === 'ready'
+        ${downloadIsValid() && UpdateState.download.state === 'ready'
           ? `<button class="btn-primary" id="installNowBtn">安装更新</button>` : ''}
       </div>
       <button class="btn-ghost block-btn" id="forceRefresh">强制刷新界面</button>
@@ -1486,9 +1495,17 @@
       try {
         const st = JSON.parse(n.getUpdateStatus());
         if (st.state && st.state !== 'idle') {
-          UpdateState.download = st;
-          refreshUpdateCard();
-          if (st.state === 'downloading') startUpdatePolling();
+          // 清理过期下载记录（版本不高于当前版本）
+          const dCode = Number(st.code) || 0;
+          if (dCode && dCode <= getCurrentVersion().code) {
+            if (n.clearUpdate) n.clearUpdate();
+            UpdateState.download = null;
+            refreshUpdateCard();
+          } else {
+            UpdateState.download = st;
+            refreshUpdateCard();
+            if (st.state === 'downloading') startUpdatePolling();
+          }
         }
       } catch (e) { /* 忽略 */ }
     }
@@ -1503,6 +1520,14 @@
       try {
         const st = JSON.parse(n.getUpdateStatus());
         if (!st.state || st.state === 'idle') { stopUpdatePolling(); return; }
+        const dCode = Number(st.code) || 0;
+        if (dCode && dCode <= getCurrentVersion().code) {
+          if (n.clearUpdate) n.clearUpdate();
+          UpdateState.download = null;
+          stopUpdatePolling();
+          refreshUpdateCard();
+          return;
+        }
         const prev = UpdateState.download;
         UpdateState.download = st;
         // 进度变化才刷新，减少重绘

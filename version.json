@@ -1,7 +1,7 @@
 {
-  "versionCode": 22,
-  "versionName": "5.3",
+  "versionCode": 23,
+  "versionName": "5.4",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "修复点击更新后卡死：消除递归渲染，改为局部更新进度",
+  "changelog": "清理过期的更新记录，避免显示旧的下载完成提示",
   "publishedAt": "2026-11-20"
 }
