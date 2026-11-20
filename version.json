@@ -1,7 +1,7 @@
 {
-  "versionCode": 25,
-  "versionName": "5.6",
+  "versionCode": 26,
+  "versionName": "5.7",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "安全加固：应用内网络出口限制为仅更新检查所需域名，关闭 WebView 万能跨域访问，签名密码移出源码；修复发布脚本未同步 APK 内嵌网页的问题",
+  "changelog": "修复应用内更新：补全 GitHub 下载域名（release-assets），改用 FileProvider 授权安装器读取，修复下载后点安装无反应的问题",
   "publishedAt": "2026-11-20"
 }

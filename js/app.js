@@ -1537,6 +1537,7 @@
         if (st.state === 'ready' || st.state === 'failed') {
           stopUpdatePolling();
           if (st.state === 'ready') toast('新版本已下载完成，点「安装更新」完成升级');
+          else toast('下载失败，请检查网络后重试');
         }
       } catch (e) { stopUpdatePolling(); }
     }, 1500);
