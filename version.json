@@ -1,7 +1,7 @@
 {
-  "versionCode": 23,
-  "versionName": "5.4",
+  "versionCode": 24,
+  "versionName": "5.5",
   "apkUrl": "https://github.com/fu-yuan415/my-hub/releases/download/latest/app-release.apk",
-  "changelog": "清理过期的更新记录，避免显示旧的下载完成提示",
+  "changelog": "测试版：验证软件内更新链路",
   "publishedAt": "2026-11-20"
 }
