@@ -1119,7 +1119,7 @@
         <button class="btn-ghost block-btn" id="openSysSettings">打开系统应用设置</button>
         <p class="hint block-hint">系统级权限由安卓管理，这里可以快速跳转查看和修改。</p>
       </section>
-      <section class="card">
+      <section class="card" id="updateCard">
         <div class="card-head"><h3>应用更新</h3></div>
         <div class="ver-row">
           <span>当前版本</span>
@@ -1211,7 +1211,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '5.2';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '5.3';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1360,73 +1360,44 @@
     toast(`图标已切换到第 ${idx} 款`);
   };
 
-  function initUpdatePanel() {
-    const cur = $('#curVer');
-    const footer = $('#verFooter');
+  /** 只生成"应用更新"卡片内部的 HTML（不触发全局渲染，避免递归） */
+  function updateCardInner() {
+    return `
+      <div class="card-head"><h3>应用更新</h3></div>
+      <div class="ver-row"><span>当前版本</span><strong id="curVer">${getCurrentVersionText()}</strong></div>
+      <div class="ver-row"><span>最新版本</span><strong id="latestVer">${esc(UpdateState.latestText || '未检查')}</strong></div>
+      ${UpdateState.hasUpdate ? `<div class="update-note">${esc(UpdateState.changelog || '有新版本可用')}</div>` : ''}
+      ${renderDownloadBoxHTML()}
+      <div class="btn-row">
+        <button class="btn-ghost" id="checkUpdateBtn">${UpdateState.checking ? '检查中…' : '检查更新'}</button>
+        ${UpdateState.hasUpdate && (!UpdateState.download || ['idle','failed'].includes(UpdateState.download.state))
+          ? `<button class="btn-primary" id="doUpdateBtn">立即更新</button>` : ''}
+        ${UpdateState.download && UpdateState.download.state === 'ready'
+          ? `<button class="btn-primary" id="installNowBtn">安装更新</button>` : ''}
+      </div>
+      <button class="btn-ghost block-btn" id="forceRefresh">强制刷新界面</button>
+      <p class="hint block-hint">更新为覆盖安装，不会清除你的数据。</p>`;
+  }
 
+  function getCurrentVersionText() {
     const v = getCurrentVersion();
-    if (cur) {
-      cur.textContent = inApp()
-        ? `${v.name}（${v.code}）`
-        : `网页版 ${v.web}（未安装 App）`;
-    }
-    if (footer) {
-      footer.textContent = inApp()
-        ? `我的工作台 · App ${v.name} · 网页 ${v.web}`
-        : `我的工作台 · 网页版 ${v.web}`;
-    }
+    return inApp() ? `${v.name}（${v.code}）` : `网页版 ${v.web}（未安装 App）`;
+  }
 
-    async function checkUpdate(silent) {
-      UpdateState.checking = true;
-      if (!silent) render();   // 立刻把按钮变成"检查中…"
-      try {
-        const url = location.protocol === 'file:'
-          ? 'https://fu-yuan415.github.io/my-hub/version.json?t=' + Date.now()
-          : './version.json?t=' + Date.now();
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const info = await res.json();
-        UpdateState.remoteInfo = info;
-        UpdateState.latestText = `${info.versionName}（${info.versionCode}）`;
-        UpdateState.hasUpdate = Number(info.versionCode) > v.code;
-        UpdateState.changelog = info.changelog || '有新版本可用';
-        UpdateState.checking = false;
-        render();               // 关键：检测完重新渲染，让最新版本和按钮出现在页面上
-        if (!silent) toast(UpdateState.hasUpdate ? '发现新版本，可立即更新' : '已是最新版本');
-        return UpdateState.hasUpdate;
-      } catch (e) {
-        UpdateState.checking = false;
-        UpdateState.latestText = '检查失败';
-        UpdateState.hasUpdate = false;
-        render();
-        if (!silent) toast('检查更新失败，请检查网络');
-        return false;
-      }
-    }
+  /** 局部刷新更新卡片 + 重新绑定其事件。绝不调用 render()。 */
+  function refreshUpdateCard() {
+    const card = $('#updateCard');
+    if (!card || currentPage !== 'settings') return;
+    card.innerHTML = updateCardInner();
+    bindUpdateCard();
+  }
 
+  function bindUpdateCard() {
     const checkBtn = $('#checkUpdateBtn');
     if (checkBtn) checkBtn.addEventListener('click', () => checkUpdate(false));
 
-    const refreshBtn = $('#forceRefresh');
-    if (refreshBtn) refreshBtn.addEventListener('click', async () => {
-      toast('正在刷新…');
-      try {
-        // 清 Service Worker 缓存
-        if ('serviceWorker' in navigator) {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map(r => r.unregister()));
-        }
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map(k => caches.delete(k)));
-        }
-      } catch (e) { /* 忽略 */ }
-      // 强制重载（带时间戳绕过缓存）
-      location.replace(location.pathname + '?r=' + Date.now());
-    });
-
     const doBtn = $('#doUpdateBtn');
-    if (doBtn) doBtn.addEventListener('click', async () => {
+    if (doBtn) doBtn.addEventListener('click', () => {
       const info = UpdateState.remoteInfo;
       if (!info) return toast('请先检查更新');
       const n = native();
@@ -1436,7 +1407,7 @@
         if (String(r).startsWith('error')) return toast('启动下载失败');
         UpdateState.download = { state: 'downloading', progress: 0,
           version: info.versionName, code: info.versionCode };
-        render();
+        refreshUpdateCard();
         startUpdatePolling();
         toast('开始下载，可在后台继续');
       } else {
@@ -1455,26 +1426,75 @@
       else toast('安装失败：' + r);
     });
 
-    // 进入设置页时读取一次下载状态（App 重启后仍能显示"安装"）
-    refreshUpdateStatus();
+    const refreshBtn = $('#forceRefresh');
+    if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+      toast('正在刷新…');
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch (e) { /* 忽略 */ }
+      location.replace(location.pathname + '?r=' + Date.now());
+    });
   }
 
-  /** 读取原生下载状态并更新 UI */
-  function refreshUpdateStatus() {
-    const n = native();
-    if (!n || typeof n.getUpdateStatus !== 'function') return;
+  async function checkUpdate(silent) {
+    UpdateState.checking = true;
+    if (!silent) refreshUpdateCard();
     try {
-      const raw = n.getUpdateStatus();
-      const st = JSON.parse(raw);
-      if (st.state && st.state !== 'idle') {
-        UpdateState.download = st;
-        if (currentPage === 'settings') render();
-        if (st.state === 'downloading') startUpdatePolling();
-      }
-    } catch (e) { /* 忽略 */ }
+      const url = location.protocol === 'file:'
+        ? 'https://fu-yuan415.github.io/my-hub/version.json?t=' + Date.now()
+        : './version.json?t=' + Date.now();
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const info = await res.json();
+      UpdateState.remoteInfo = info;
+      UpdateState.latestText = `${info.versionName}（${info.versionCode}）`;
+      UpdateState.hasUpdate = Number(info.versionCode) > getCurrentVersion().code;
+      UpdateState.changelog = info.changelog || '有新版本可用';
+      UpdateState.checking = false;
+      refreshUpdateCard();
+      if (!silent) toast(UpdateState.hasUpdate ? '发现新版本，可立即更新' : '已是最新版本');
+      return UpdateState.hasUpdate;
+    } catch (e) {
+      UpdateState.checking = false;
+      UpdateState.latestText = '检查失败';
+      UpdateState.hasUpdate = false;
+      refreshUpdateCard();
+      if (!silent) toast('检查更新失败，请检查网络');
+      return false;
+    }
   }
 
-  /** 轮询下载进度（每 1.5 秒），完成后停 */
+  function initUpdatePanel() {
+    const footer = $('#verFooter');
+    if (footer) {
+      const v = getCurrentVersion();
+      footer.textContent = inApp()
+        ? `我的工作台 · App ${v.name} · 网页 ${v.web}`
+        : `我的工作台 · 网页版 ${v.web}`;
+    }
+    bindUpdateCard();
+    // 只读取一次状态；不触发 render，避免递归。若下载中会启动轮询。
+    const n = native();
+    if (n && typeof n.getUpdateStatus === 'function') {
+      try {
+        const st = JSON.parse(n.getUpdateStatus());
+        if (st.state && st.state !== 'idle') {
+          UpdateState.download = st;
+          refreshUpdateCard();
+          if (st.state === 'downloading') startUpdatePolling();
+        }
+      } catch (e) { /* 忽略 */ }
+    }
+  }
+
+  /** 轮询下载进度；只局部刷新卡片，绝不全局 render */
   function startUpdatePolling() {
     if (updatePollTimer) return;
     updatePollTimer = setInterval(() => {
@@ -1482,10 +1502,13 @@
       if (!n || typeof n.getUpdateStatus !== 'function') { stopUpdatePolling(); return; }
       try {
         const st = JSON.parse(n.getUpdateStatus());
-        const prev = UpdateState.download;
         if (!st.state || st.state === 'idle') { stopUpdatePolling(); return; }
+        const prev = UpdateState.download;
         UpdateState.download = st;
-        if (currentPage === 'settings') render();
+        // 进度变化才刷新，减少重绘
+        if (!prev || prev.progress !== st.progress || prev.state !== st.state) {
+          refreshUpdateCard();
+        }
         if (st.state === 'ready' || st.state === 'failed') {
           stopUpdatePolling();
           if (st.state === 'ready') toast('新版本已下载完成，点「安装更新」完成升级');
