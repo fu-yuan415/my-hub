@@ -1,0 +1,29 @@
+# 这个仓库是公开的（GitHub Pages 站点，任何人都能访问）。
+# 下面这些绝对不能被提交上去。
+
+# 签名密钥：一旦泄露，别人就能签出「看起来是官方更新」的恶意 APK
+*.jks
+*.keystore
+*.pfx
+*.p12
+*.pem
+*.key
+
+# 个人数据与备份（日记/记账/密码本的导出）
+backup*.json
+*备份*
+*导出*
+personal_hub_data*
+我的工作台-*.json
+
+# 构建产物
+*.apk
+*.aab
+build/
+.gradle/
+
+# 本机配置
+.env
+*.local
+Thumbs.db
+desktop.ini
