@@ -68,8 +68,10 @@
     latestText: '',
     hasUpdate: false,
     changelog: '',
-    remoteInfo: null
+    remoteInfo: null,
+    download: null   // { state:'downloading|ready|failed', progress, version, code }
   };
+  let updatePollTimer = null;
 
   /* ---------- 工具 ---------- */
   function esc(s) {
@@ -1021,8 +1023,31 @@
   }
 
   /* ---------- 设置 ---------- */
+  function renderDownloadBoxHTML() {
+    const d = UpdateState.download;
+    if (!d || d.state === 'idle') return '';
+    if (d.state === 'downloading') return `
+      <div class="download-box">
+        <div class="download-head"><span>正在下载 ${esc(d.version || '')}</span><strong>${d.progress}%</strong></div>
+        <div class="download-track"><div class="download-fill" style="width:${d.progress}%"></div></div>
+        <p class="hint">下载可在后台进行，完成后这里会出现「安装」按钮。</p>
+      </div>`;
+    if (d.state === 'ready') return `
+      <div class="download-box ready">
+        <div class="download-head"><span>新版本已下载完成</span><strong>${esc(d.version || '')}</strong></div>
+        <p class="hint">点下面「安装更新」完成升级，数据会保留。</p>
+      </div>`;
+    if (d.state === 'failed') return `
+      <div class="download-box failed">
+        <div class="download-head"><span>下载失败</span></div>
+        <p class="hint">请检查网络后重试。</p>
+      </div>`;
+    return '';
+  }
+
   function renderSettings() {
     const s = Store.getSettings();
+    const downloadBoxHTML = renderDownloadBoxHTML();
     let html = `
       <section class="card">
         <div class="card-head"><h3>个人信息</h3></div>
@@ -1105,9 +1130,13 @@
           <strong id="latestVer">${UpdateState.latestText || '未检查'}</strong>
         </div>
         ${UpdateState.hasUpdate ? `<div class="update-note">${esc(UpdateState.changelog || '有新版本可用')}</div>` : ''}
+        ${downloadBoxHTML}
         <div class="btn-row">
           <button class="btn-ghost" id="checkUpdateBtn">${UpdateState.checking ? '检查中…' : '检查更新'}</button>
-          ${UpdateState.hasUpdate ? `<button class="btn-primary" id="doUpdateBtn">立即更新</button>` : ''}
+          ${UpdateState.hasUpdate && (!UpdateState.download || UpdateState.download.state === 'idle' || UpdateState.download.state === 'failed')
+            ? `<button class="btn-primary" id="doUpdateBtn">立即更新</button>` : ''}
+          ${UpdateState.download && UpdateState.download.state === 'ready'
+            ? `<button class="btn-primary" id="installNowBtn">安装更新</button>` : ''}
         </div>
         <button class="btn-ghost block-btn" id="forceRefresh">强制刷新界面</button>
         <p class="hint block-hint">更新为覆盖安装，不会清除你的数据。界面样式异常时点「强制刷新」。</p>
@@ -1182,7 +1211,7 @@
   }
 
   /* ---------- 原生能力桥 ---------- */
-  const WEB_VERSION = '5.0';   // 网页代码版本，每次改网页会同步更新
+  const WEB_VERSION = '5.1';   // 网页代码版本，每次改网页会同步更新
 
   function native() {
     try {
@@ -1401,16 +1430,72 @@
       const info = UpdateState.remoteInfo;
       if (!info) return toast('请先检查更新');
       const n = native();
-      if (n && typeof n.installUpdate === 'function') {
-        const r = n.installUpdate(info.apkUrl, info.versionName,
-          Number(info.versionCode));
-        if (String(r).startsWith('error')) toast('启动更新失败');
-        else toast('开始下载，请在提示中点击「安装」');
+      if (n && typeof n.startDownload === 'function') {
+        const r = n.startDownload(info.apkUrl, info.versionName, Number(info.versionCode));
+        if (r === 'need_permission') return toast('请先允许安装未知应用');
+        if (String(r).startsWith('error')) return toast('启动下载失败');
+        UpdateState.download = { state: 'downloading', progress: 0,
+          version: info.versionName, code: info.versionCode };
+        render();
+        startUpdatePolling();
+        toast('开始下载，可在后台继续');
       } else {
         window.open(info.apkUrl, '_blank');
         toast('已在新页面打开下载');
       }
     });
+
+    const installBtn = $('#installNowBtn');
+    if (installBtn) installBtn.addEventListener('click', () => {
+      const n = native();
+      if (!n || typeof n.installNow !== 'function') return toast('请在 App 内安装');
+      const r = n.installNow();
+      if (r === 'ok') toast('请在系统提示中点击「安装」');
+      else if (r === 'not_ready') toast('还没下载完成，请稍候');
+      else toast('安装失败：' + r);
+    });
+
+    // 进入设置页时读取一次下载状态（App 重启后仍能显示"安装"）
+    refreshUpdateStatus();
+  }
+
+  /** 读取原生下载状态并更新 UI */
+  function refreshUpdateStatus() {
+    const n = native();
+    if (!n || typeof n.getUpdateStatus !== 'function') return;
+    try {
+      const raw = n.getUpdateStatus();
+      const st = JSON.parse(raw);
+      if (st.state && st.state !== 'idle') {
+        UpdateState.download = st;
+        if (currentPage === 'settings') render();
+        if (st.state === 'downloading') startUpdatePolling();
+      }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /** 轮询下载进度（每 1.5 秒），完成后停 */
+  function startUpdatePolling() {
+    if (updatePollTimer) return;
+    updatePollTimer = setInterval(() => {
+      const n = native();
+      if (!n || typeof n.getUpdateStatus !== 'function') { stopUpdatePolling(); return; }
+      try {
+        const st = JSON.parse(n.getUpdateStatus());
+        const prev = UpdateState.download;
+        if (!st.state || st.state === 'idle') { stopUpdatePolling(); return; }
+        UpdateState.download = st;
+        if (currentPage === 'settings') render();
+        if (st.state === 'ready' || st.state === 'failed') {
+          stopUpdatePolling();
+          if (st.state === 'ready') toast('新版本已下载完成，点「安装更新」完成升级');
+        }
+      } catch (e) { stopUpdatePolling(); }
+    }, 1500);
+  }
+
+  function stopUpdatePolling() {
+    if (updatePollTimer) { clearInterval(updatePollTimer); updatePollTimer = null; }
   }
 
   function moduleDesc(k) {

@@ -926,6 +926,30 @@ input:focus, textarea:focus { border-color: var(--primary); background: var(--su
   display: flex; align-items: center; justify-content: center;
 }
 
+/* ==================== 更新下载状态 ==================== */
+.download-box {
+  background: var(--surface-2); border-radius: var(--r-sm);
+  padding: 12px 14px; margin: 8px 0 12px;
+}
+.download-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: var(--text-2); margin-bottom: 8px;
+}
+.download-head strong { color: var(--primary); font-variant-numeric: tabular-nums; }
+.download-track {
+  height: 7px; border-radius: 5px; background: var(--border); overflow: hidden;
+}
+.download-fill {
+  height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--primary), #93a3f7);
+  transition: width .3s ease;
+}
+.download-box .hint { margin: 8px 0 0; font-size: 11px; }
+.download-box.ready { background: color-mix(in srgb, var(--success) 10%, var(--surface-2)); }
+.download-box.ready .download-head strong { color: var(--success); }
+.download-box.failed { background: color-mix(in srgb, var(--danger) 10%, var(--surface-2)); }
+.download-box.failed .download-head { color: var(--danger); }
+
 /* ==================== 日历 ==================== */
 .cal-legend {
   display: flex; align-items: center; gap: 16px;
